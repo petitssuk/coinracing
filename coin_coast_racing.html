@@ -526,6 +526,10 @@
       } catch (_) {}
 
       const clientId = "drv_" + Math.random().toString(36).slice(2, 8);
+      // GitHub Pages 주소(https://petitssuk.github.io/coinracing/)는 웹 페이지 주소이고,
+      // 실제 기기 간 실시간 멀티플레이 동기화에는 WebSocket 중계 서버 주소(wss://...)가 필요합니다.
+      // 서버 배포 후 아래 wss:// 주소 부분을 실제 WebSocket 서버 주소로 교체해 주세요.
+      const RENDER_WS_URL = "wss://coinracing-uxuc.onrender.com";
       let myNickname = "드라이버_" + Math.floor(100 + Math.random() * 899);
       let roomCode = "7777";
       let isInRoom = true;
@@ -543,6 +547,7 @@
 
       const remotePeers = new Map();
       let broadcastChannel = null;
+      let renderSocket = null;
       let soundEnabled = true;
       let audioReady = false;
       let firestoreDb = null;
@@ -608,6 +613,7 @@
       let hazardEntities = [];
       let boosterPadEntities = [];
       let aiEntities = [];
+      let remoteCarEntities = new Map();
 
       const lobbyScreen = document.getElementById("lobbyScreen");
       const carSelectScreen = document.getElementById("carSelectScreen");
@@ -796,7 +802,151 @@
             broadcastChannel.onmessage = (event) => handleSyncMessage(event.data);
           } catch (_) {}
         }
+        bindRenderSocket();
         bindCloudRoomSync();
+      }
+
+      function bindRenderSocket() {
+        if (renderSocket) {
+          try {
+            renderSocket.close();
+          } catch (_) {}
+          renderSocket = null;
+        }
+        if (!isInRoom || !RENDER_WS_URL || RENDER_WS_URL.includes("여기에-배포한-서버-주소")) return;
+
+        try {
+          const baseUrl = RENDER_WS_URL.replace(/\/+$/, "");
+          const wsUrl = `${baseUrl}?room=${encodeURIComponent(roomCode)}&sessionId=${encodeURIComponent(clientId)}`;
+          renderSocket = new WebSocket(wsUrl);
+
+          renderSocket.onopen = () => {
+            sendRenderPayload({
+              type: "JOIN",
+              senderId: clientId,
+              name: myNickname,
+              carId: selectedCar.id,
+              room: roomCode,
+              courseSeed,
+              score: carState.score,
+              z: carState.z,
+              hp: carState.hp
+            });
+          };
+
+          renderSocket.onmessage = (event) => {
+            try {
+              const parsed = JSON.parse(event.data);
+              if (parsed && parsed.type === "ROOM_ROSTER" && Array.isArray(parsed.players)) {
+                const now = Date.now();
+                remotePeers.clear();
+                parsed.players.forEach((p) => {
+                  if (!p || !p.sessionId || p.sessionId === clientId) return;
+                  remotePeers.set(p.sessionId, {
+                    senderId: p.sessionId,
+                    name: p.name || "드라이버",
+                    carId: p.carId || selectedCar.id,
+                    x: typeof p.x === "number" ? p.x : 0,
+                    score: Number(p.score || 0),
+                    z: Number(p.z ?? -4),
+                    hp: Number(p.hp ?? 100),
+                    lastSeen: now
+                  });
+                });
+                syncRemoteCarMeshes();
+                if (phase === "LOBBY") {
+                  renderLobbySlots();
+                }
+                return;
+              }
+              if (parsed && parsed.type === "PLAYER_STATE" && parsed.sessionId && parsed.sessionId !== clientId) {
+                const existing = remotePeers.get(parsed.sessionId) || {
+                  senderId: parsed.sessionId,
+                  name: parsed.name || "드라이버",
+                  carId: parsed.carId || selectedCar.id,
+                  x: 0,
+                  score: 0,
+                  z: -4,
+                  hp: 100
+                };
+                remotePeers.set(parsed.sessionId, {
+                  ...existing,
+                  x: typeof parsed.x === "number" ? parsed.x : existing.x,
+                  z: typeof parsed.z === "number" ? parsed.z : existing.z,
+                  score: typeof parsed.score === "number" ? parsed.score : existing.score,
+                  hp: typeof parsed.hp === "number" ? parsed.hp : existing.hp,
+                  lastSeen: Date.now()
+                });
+                syncRemoteCarMeshes();
+                return;
+              }
+              if (parsed && parsed.type === "LEADERBOARD_UPDATE" && Array.isArray(parsed.entries)) {
+                applyTop5Entries(parsed.entries);
+                return;
+              }
+              handleSyncMessage(parsed);
+            } catch (_) {}
+          };
+
+          renderSocket.onclose = () => {
+            renderSocket = null;
+          };
+        } catch (_) {}
+      }
+
+      function sendRenderPayload(payload) {
+        if (!renderSocket || renderSocket.readyState !== WebSocket.OPEN) return;
+        try {
+          if (payload.type === "JOIN" || payload.type === "PING" || payload.type === "HELLO") {
+            renderSocket.send(
+              JSON.stringify({
+                type: "PLAYER_JOIN",
+                player: {
+                  sessionId: clientId,
+                  name: myNickname,
+                  carId: selectedCar.id,
+                  roomCode,
+                  score: Number(payload.score ?? carState.score),
+                  z: Number(payload.z ?? carState.z),
+                  hp: Number(payload.hp ?? carState.hp)
+                }
+              })
+            );
+            return;
+          }
+          if (payload.type === "STATE") {
+            renderSocket.send(
+              JSON.stringify({
+                type: "PLAYER_STATE",
+                sessionId: clientId,
+                x: carState.x,
+                z: Number(payload.z ?? carState.z),
+                score: Number(payload.score ?? carState.score),
+                hp: Number(payload.hp ?? carState.hp)
+              })
+            );
+            return;
+          }
+          if (payload.type === "GRID_START") {
+            renderSocket.send(
+              JSON.stringify({
+                type: "ROOM_START",
+                roomCode,
+                carId: payload.carId || selectedCar.id,
+                courseSeed: payload.courseSeed
+              })
+            );
+            return;
+          }
+          if (payload.type === "LEAVE") {
+            renderSocket.send(
+              JSON.stringify({
+                type: "PLAYER_LEAVE",
+                sessionId: clientId
+              })
+            );
+          }
+        } catch (_) {}
       }
 
       function sendSyncMessage(type, extra = {}) {
@@ -819,6 +969,7 @@
             broadcastChannel.postMessage(payload);
           } catch (_) {}
         }
+        sendRenderPayload(payload);
         syncCloudRoomPresence(payload);
       }
 
@@ -936,46 +1087,46 @@
           if (payload.type === "LEAVE") {
             await fsMod.setDoc(
               targetRoomRef,
-              {
-                players: { [clientId]: fsMod.deleteField() },
-                updatedAt: Date.now()
-              },
-              { merge: true }
-            );
-            return;
+      function applyTop5Entries(entries) {
+        if (!Array.isArray(entries)) return;
+        top5Leaderboard = entries
+          .slice()
+          .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+          .slice(0, 5);
+        try {
+          localStorage.setItem("ccr_3d_top5", JSON.stringify(top5Leaderboard));
+        } catch (_) {}
+        refreshRecordBadges();
+      }
+
+      async function fetchServerLeaderboard() {
+        if (!RENDER_WS_URL || RENDER_WS_URL.includes("여기에-배포한-서버-주소")) return;
+        try {
+          const httpBase = RENDER_WS_URL
+            .replace(/^wss:\/\//i, "https://")
+            .replace(/^ws:\/\//i, "http://")
+            .replace(/\/+$/, "");
+          const res = await fetch(`${httpBase}/leaderboard`, { cache: "no-store" });
+          if (!res.ok) return;
+          const data = await res.json();
+          if (Array.isArray(data.entries)) {
+            applyTop5Entries(data.entries);
           }
-          const updateObj = {
-            players: {
-              [clientId]: {
-                senderId: clientId,
-                name: myNickname,
-                carId: selectedCar.id,
-                score: Number(payload.score || 0),
-                z: Number(payload.z || -4),
-                hp: Number(payload.hp ?? 100),
-                ts: Date.now()
-              }
-            },
-            updatedAt: Date.now()
-          };
-          if (payload.type === "GRID_START") {
-            updateObj.lastAction = {
-              type: "GRID_START",
-              senderId: clientId,
-              carId: selectedCar.id,
-              courseSeed: payload.courseSeed,
-              ts: Date.now()
-            };
-          }
-          await fsMod.setDoc(targetRoomRef, updateObj, { merge: true });
         } catch (_) {}
       }
 
-      async function saveLeaderboardToCloud(entries) {
-        if (!firestoreDb || !cloudLeaderboardDocRef) return;
+      async function saveLeaderboardToServer(entries) {
+        if (!RENDER_WS_URL || RENDER_WS_URL.includes("여기에-배포한-서버-주소")) return;
         try {
-          const fsMod = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-          await fsMod.setDoc(cloudLeaderboardDocRef, { entries, updatedAt: Date.now() }, { merge: true });
+          const httpBase = RENDER_WS_URL
+            .replace(/^wss:\/\//i, "https://")
+            .replace(/^ws:\/\//i, "http://")
+            .replace(/\/+$/, "");
+          await fetch(`${httpBase}/leaderboard`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ entries })
+          });
         } catch (_) {}
       }
 
@@ -1003,13 +1154,9 @@
           room: roomCode,
           timeSec: Math.round(raceElapsed)
         });
-        top5Leaderboard.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
-        top5Leaderboard = top5Leaderboard.slice(0, 5);
-        try {
-          localStorage.setItem("ccr_3d_top5", JSON.stringify(top5Leaderboard));
-        } catch (_) {}
-        refreshRecordBadges();
+        applyTop5Entries(top5Leaderboard);
         saveLeaderboardToCloud(top5Leaderboard);
+        saveLeaderboardToServer(top5Leaderboard);
       }
 
       function createCarIllustrationSvg(car) {
@@ -1714,6 +1861,46 @@
             targetX: bot.laneOffset
           });
         });
+        syncRemoteCarMeshes();
+      }
+
+      function syncRemoteCarMeshes() {
+        if (!scene) return;
+        const activeIds = new Set(remotePeers.keys());
+
+        for (const [sid, entity] of remoteCarEntities.entries()) {
+          if (!activeIds.has(sid)) {
+            scene.remove(entity.group);
+            remoteCarEntities.delete(sid);
+          }
+        }
+
+        remotePeers.forEach((peer, sid) => {
+          let entity = remoteCarEntities.get(sid);
+          const spec = CAR_ROSTER.find((c) => c.id === peer.carId) || CAR_ROSTER[1];
+          if (!entity) {
+            const built = createCarMesh(spec, false);
+            scene.add(built.group);
+            entity = {
+              group: built.group,
+              wheels: built.wheels,
+              x: typeof peer.x === "number" ? peer.x : 0,
+              z: typeof peer.z === "number" ? peer.z : -4
+            };
+            remoteCarEntities.set(sid, entity);
+          }
+          const targetX = typeof peer.x === "number" ? peer.x : entity.x;
+          const targetZ = typeof peer.z === "number" ? peer.z : entity.z;
+          const prevZ = entity.z;
+          entity.x += (targetX - entity.x) * 0.35;
+          entity.z += (targetZ - entity.z) * 0.35;
+          const groundY = getCourseElevationY(entity.z);
+          entity.group.position.set(entity.x, groundY + 0.14, entity.z);
+          const dz = Math.max(0, prevZ - entity.z);
+          entity.wheels.forEach((w) => {
+            w.rotation.x -= dz * 0.85;
+          });
+        });
       }
 
       function populateCollectiblesAndHazards() {
@@ -2197,12 +2384,12 @@
           triggerRaceEnd("TIME_UP");
           return;
         }
-
-        if (nowMs - lastNetSyncMs > 180) {
+        if (nowMs - lastNetSyncMs > 120) {
           lastNetSyncMs = nowMs;
           sendSyncMessage("STATE", { score: carState.score, z: carState.z, hp: carState.hp });
         }
 
+        syncRemoteCarMeshes();
         const myRank = computeStandings().findIndex((s) => s.isMe) + 1;
         updateHudTelemetry(myRank);
         renderThreeFrame(nowMs);
@@ -2478,6 +2665,7 @@
         nickInput.value = "";
         roomInput.value = "";
         refreshRecordBadges();
+        fetchServerLeaderboard();
         bindRoomChannel();
         renderLobbySlots();
         sendSyncMessage("HELLO");
