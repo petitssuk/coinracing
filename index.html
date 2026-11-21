@@ -173,6 +173,10 @@
               id="nickInput"
               type="text"
               maxlength="14"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
               placeholder="드라이버 이름"
               class="flex-1 min-w-[130px] bg-slate-950/80 border border-slate-700 focus:border-sky-400 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white placeholder-slate-500 outline-none"
             />
@@ -186,6 +190,10 @@
                 inputmode="numeric"
                 pattern="[0-9]*"
                 maxlength="4"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
                 placeholder="숫자 4자리"
                 class="w-full bg-slate-950/80 border border-slate-700 focus:border-sky-400 rounded-xl px-3 py-2 text-sm font-semibold text-white placeholder-slate-500 outline-none"
               />
@@ -1166,12 +1174,11 @@
             <span class="px-2 py-0.5 rounded bg-sky-500 text-[10px] font-black text-slate-950">YOU</span>
             <span>${escapeHtml(myNickname)}</span>
           </div>
-          <span class="text-xs font-bold text-sky-300">${escapeHtml(selectedCar.name)}</span>
+          <span class="text-xs font-bold text-sky-300">대기 중</span>
         `;
         lobbySlots.appendChild(meRow);
 
         peers.forEach((p) => {
-          const peerCar = CAR_ROSTER.find((c) => c.id === p.carId) || CAR_ROSTER[0];
           const row = document.createElement("div");
           row.className = "flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-950/65 border border-slate-800";
           row.innerHTML = `
@@ -1179,7 +1186,7 @@
               <span class="px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 text-[10px] font-extrabold">ONLINE</span>
               <span>${escapeHtml(p.name)}</span>
             </div>
-            <span class="text-xs text-slate-400">${escapeHtml(peerCar.name)} · ${p.score.toLocaleString()}원</span>
+            <span class="text-xs text-slate-400">대기 중</span>
           `;
           lobbySlots.appendChild(row);
         });
@@ -1187,7 +1194,6 @@
         const botCount = Math.max(0, 5 - humanCount);
         for (let i = 0; i < botCount; i++) {
           const bot = AI_BOTS[i % AI_BOTS.length];
-          const botCar = CAR_ROSTER.find((c) => c.id === bot.carId) || CAR_ROSTER[0];
           const row = document.createElement("div");
           row.className = "flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-950/45 border border-slate-800/70";
           row.innerHTML = `
@@ -1195,7 +1201,7 @@
               <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-extrabold">AI GRID</span>
               <span>${escapeHtml(bot.name)}</span>
             </div>
-            <span class="text-xs text-slate-500">${escapeHtml(botCar.name)}</span>
+            <span class="text-xs text-slate-500">대기 중</span>
           `;
           lobbySlots.appendChild(row);
         }
