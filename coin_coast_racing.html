@@ -162,6 +162,9 @@
               <span id="lobbyRoomTag" class="px-2.5 py-0.5 rounded-lg text-xs font-extrabold bg-amber-400/15 text-amber-300 border border-amber-400/30">
                 ROOM #7777
               </span>
+              <span id="wsConnTag" class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-slate-800 text-sky-300 border border-slate-700">
+                WS 연결 대기
+              </span>
             </div>
           </div>
 
@@ -631,6 +634,7 @@
       const lobbyDot = document.getElementById("lobbyDot");
       const lobbyCountLabel = document.getElementById("lobbyCountLabel");
       const lobbyRoomTag = document.getElementById("lobbyRoomTag");
+      const wsConnTag = document.getElementById("wsConnTag");
       const lobbySlots = document.getElementById("lobbySlots");
       const carGrid = document.getElementById("carGrid");
       const selectedCarSummary = document.getElementById("selectedCarSummary");
@@ -665,6 +669,14 @@
       const toastBox = document.getElementById("toastBox");
 
       let toastTimer = null;
+
+      function setWsBadge(text, isConnected) {
+        if (!wsConnTag) return;
+        wsConnTag.textContent = text;
+        wsConnTag.className = isConnected
+          ? "px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/35"
+          : "px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-slate-800 text-amber-300 border border-slate-700";
+      }
 
       function showToast(message) {
         toastBox.textContent = message;
@@ -799,7 +811,23 @@
             broadcastChannel.onmessage = (event) => handleSyncMessage(event.data);
           } catch (_) {}
         }
-        bindRenderSocket();
+        if (renderSocket && renderSocket.readyState === WebSocket.OPEN) {
+          sendRenderPayload({
+            type: "JOIN",
+            name: myNickname,
+            room: roomCode,
+            score: carState.score,
+            z: carState.z,
+            hp: carState.hp
+          });
+          setTimeout(() => {
+            if (isInRoom && renderSocket && renderSocket.readyState === WebSocket.OPEN) {
+              sendRenderPayload({ type: "JOIN" });
+            }
+          }, 500);
+        } else {
+          bindRenderSocket();
+        }
       }
 
       function bindRenderSocket() {
@@ -815,10 +843,14 @@
           renderSocket = null;
         }
         isSocketConnecting = false;
-        if (!isInRoom || !RENDER_WS_URL) return;
+        if (!isInRoom || !RENDER_WS_URL) {
+          setWsBadge("WS 오프라인", false);
+          return;
+        }
 
         try {
           isSocketConnecting = true;
+          setWsBadge("WS 연결 중...", false);
           const httpWakeUrl = RENDER_WS_URL
             .replace(/^wss:\/\//i, "https://")
             .replace(/^ws:\/\//i, "http://")
@@ -831,14 +863,21 @@
 
           renderSocket.onopen = () => {
             isSocketConnecting = false;
-            sendRenderPayload({
-              type: "JOIN",
-              name: myNickname,
-              room: roomCode,
-              score: carState.score,
-              z: carState.z,
-              hp: carState.hp
-            });
+            setWsBadge("WS 실시간 연결됨", true);
+            const sendJoinNow = () => {
+              if (!isInRoom || !renderSocket || renderSocket.readyState !== WebSocket.OPEN) return;
+              sendRenderPayload({
+                type: "JOIN",
+                name: myNickname,
+                room: roomCode,
+                score: carState.score,
+                z: carState.z,
+                hp: carState.hp
+              });
+            };
+            sendJoinNow();
+            setTimeout(sendJoinNow, 450);
+            setTimeout(sendJoinNow, 1300);
           };
 
           renderSocket.onmessage = (event) => {
@@ -900,20 +939,23 @@
 
           renderSocket.onerror = () => {
             isSocketConnecting = false;
+            setWsBadge("WS 재시도 중...", false);
           };
 
           renderSocket.onclose = () => {
             isSocketConnecting = false;
             renderSocket = null;
+            setWsBadge("WS 재연결 중...", false);
             if (isInRoom && !socketReconnectTimer) {
               socketReconnectTimer = setTimeout(() => {
                 socketReconnectTimer = null;
                 if (isInRoom) bindRenderSocket();
-              }, 2500);
+              }, 2000);
             }
           };
         } catch (_) {
           isSocketConnecting = false;
+          setWsBadge("WS 연결 오류", false);
         }
       }
 
@@ -2405,9 +2447,6 @@
         isInRoom = true;
 
         bindRoomChannel();
-        if (renderSocket && renderSocket.readyState === WebSocket.OPEN) {
-          sendSyncMessage("JOIN");
-        }
         renderLobbySlots();
         showToast("방 #" + roomCode + "에 " + myNickname + " 님으로 입장했습니다.");
       });
@@ -2415,6 +2454,7 @@
       leaveRoomBtn.addEventListener("click", () => {
         sendSyncMessage("LEAVE");
         isInRoom = false;
+        setWsBadge("WS 오프라인", false);
         if (socketReconnectTimer) {
           clearTimeout(socketReconnectTimer);
           socketReconnectTimer = null;
