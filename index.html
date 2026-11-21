@@ -545,6 +545,8 @@
       const remotePeers = new Map();
       let broadcastChannel = null;
       let renderSocket = null;
+      let socketReconnectTimer = null;
+      let isSocketConnecting = false;
       let soundEnabled = true;
       let audioReady = false;
 
@@ -801,22 +803,38 @@
       }
 
       function bindRenderSocket() {
+        if (socketReconnectTimer) {
+          clearTimeout(socketReconnectTimer);
+          socketReconnectTimer = null;
+        }
         if (renderSocket) {
           try {
+            renderSocket.onclose = null;
             renderSocket.close();
           } catch (_) {}
           renderSocket = null;
         }
+        isSocketConnecting = false;
         if (!isInRoom || !RENDER_WS_URL) return;
 
         try {
+          isSocketConnecting = true;
+          const httpWakeUrl = RENDER_WS_URL
+            .replace(/^wss:\/\//i, "https://")
+            .replace(/^ws:\/\//i, "http://")
+            .replace(/\/+$/, "");
+          fetch(httpWakeUrl + "/leaderboard", { cache: "no-store" }).catch(() => {});
+
           const baseUrl = RENDER_WS_URL.replace(/\/+$/, "");
           const wsUrl = `${baseUrl}?room=${encodeURIComponent(roomCode)}&sessionId=${encodeURIComponent(clientId)}`;
           renderSocket = new WebSocket(wsUrl);
 
           renderSocket.onopen = () => {
+            isSocketConnecting = false;
             sendRenderPayload({
               type: "JOIN",
+              name: myNickname,
+              room: roomCode,
               score: carState.score,
               z: carState.z,
               hp: carState.hp
@@ -827,11 +845,12 @@
             try {
               const parsed = JSON.parse(event.data);
               if (parsed && parsed.type === "ROOM_ROSTER" && Array.isArray(parsed.players)) {
+                if (String(parsed.roomCode || roomCode) !== String(roomCode)) return;
                 const now = Date.now();
-                remotePeers.clear();
+                const nextPeers = new Map();
                 parsed.players.forEach((p) => {
                   if (!p || !p.sessionId || p.sessionId === clientId) return;
-                  remotePeers.set(p.sessionId, {
+                  nextPeers.set(p.sessionId, {
                     senderId: p.sessionId,
                     name: p.name || "드라이버",
                     carId: p.carId || selectedCar.id,
@@ -842,6 +861,8 @@
                     lastSeen: now
                   });
                 });
+                remotePeers.clear();
+                nextPeers.forEach((val, key) => remotePeers.set(key, val));
                 syncRemoteCarMeshes();
                 if (phase === "LOBBY") {
                   renderLobbySlots();
@@ -877,10 +898,23 @@
             } catch (_) {}
           };
 
-          renderSocket.onclose = () => {
-            renderSocket = null;
+          renderSocket.onerror = () => {
+            isSocketConnecting = false;
           };
-        } catch (_) {}
+
+          renderSocket.onclose = () => {
+            isSocketConnecting = false;
+            renderSocket = null;
+            if (isInRoom && !socketReconnectTimer) {
+              socketReconnectTimer = setTimeout(() => {
+                socketReconnectTimer = null;
+                if (isInRoom) bindRenderSocket();
+              }, 2500);
+            }
+          };
+        } catch (_) {
+          isSocketConnecting = false;
+        }
       }
 
       function sendRenderPayload(payload) {
@@ -895,7 +929,7 @@
                   name: myNickname,
                   carId: selectedCar.id,
                   roomCode,
-                  x: carState.x,
+                  x: Number(payload.x ?? carState.x),
                   score: Number(payload.score ?? carState.score),
                   z: Number(payload.z ?? carState.z),
                   hp: Number(payload.hp ?? carState.hp)
@@ -909,7 +943,7 @@
               JSON.stringify({
                 type: "PLAYER_STATE",
                 sessionId: clientId,
-                x: carState.x,
+                x: Number(payload.x ?? carState.x),
                 z: Number(payload.z ?? carState.z),
                 score: Number(payload.score ?? carState.score),
                 hp: Number(payload.hp ?? carState.hp)
@@ -2371,7 +2405,9 @@
         isInRoom = true;
 
         bindRoomChannel();
-        sendSyncMessage("JOIN");
+        if (renderSocket && renderSocket.readyState === WebSocket.OPEN) {
+          sendSyncMessage("JOIN");
+        }
         renderLobbySlots();
         showToast("방 #" + roomCode + "에 " + myNickname + " 님으로 입장했습니다.");
       });
@@ -2379,6 +2415,17 @@
       leaveRoomBtn.addEventListener("click", () => {
         sendSyncMessage("LEAVE");
         isInRoom = false;
+        if (socketReconnectTimer) {
+          clearTimeout(socketReconnectTimer);
+          socketReconnectTimer = null;
+        }
+        if (renderSocket) {
+          try {
+            renderSocket.onclose = null;
+            renderSocket.close();
+          } catch (_) {}
+          renderSocket = null;
+        }
         remotePeers.clear();
         syncRemoteCarMeshes();
         nickInput.value = "";
@@ -2422,6 +2469,14 @@
         inputState.right = false;
         inputState.boost = false;
         switchScreen("LOBBY");
+        if (isInRoom) {
+          if (!renderSocket || renderSocket.readyState !== WebSocket.OPEN) {
+            bindRenderSocket();
+          } else {
+            sendSyncMessage("JOIN");
+          }
+          renderLobbySlots();
+        }
       });
 
       raceAgainBtn.addEventListener("click", () => {
@@ -2437,6 +2492,14 @@
         endOverlay.classList.add("hidden");
         countdownOverlay.classList.add("hidden");
         switchScreen("LOBBY");
+        if (isInRoom) {
+          if (!renderSocket || renderSocket.readyState !== WebSocket.OPEN) {
+            bindRenderSocket();
+          } else {
+            sendSyncMessage("JOIN");
+          }
+          renderLobbySlots();
+        }
       });
 
       soundToggleBtn.addEventListener("click", async () => {
@@ -2567,10 +2630,14 @@
           syncRemoteCarMeshes();
           renderLobbySlots();
         }
-        if (isInRoom && phase === "LOBBY") {
-          sendSyncMessage("PING");
+        if (isInRoom) {
+          if ((!renderSocket || renderSocket.readyState === WebSocket.CLOSED) && !isSocketConnecting) {
+            bindRenderSocket();
+          } else if (renderSocket && renderSocket.readyState === WebSocket.OPEN && phase === "LOBBY") {
+            sendSyncMessage("PING");
+          }
         }
-      }, 3000);
+      }, 2000);
     })();
   </script>
 </body>
