@@ -3,1069 +3,2508 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>코인 코스트 레이싱 - 멀티플레이</title>
+  <title>COIN COAST RACING</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <style>
-    :root {
-      --bg-sky: #e8f5ff;
-      --bg-sand: #fff7e0;
-      --card-bg: #ffffff;
-      --primary: #1976d2;
-      --primary-dark: #0d47a1;
-      --accent: #ff8f00;
-      --accent-soft: #fff3cd;
-      --text-main: #1b2a3a;
-      --text-sub: #5c6f82;
-      --border: #dce8f3;
-      --success: #2e7d32;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap');
 
     * {
       box-sizing: border-box;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
-      background: linear-gradient(180deg, #dff1ff 0%, #f5fbff 45%, #fff5d6 100%);
-      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      background: radial-gradient(circle at 50% 0%, #16263d 0%, #090e17 70%, #05080f 100%);
+      color: #f1f5f9;
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 16px;
+      padding: 12px;
+      overflow-x: hidden;
     }
 
-    .app-shell {
+    .glass-panel {
+      background: rgba(13, 20, 33, 0.78);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    }
+
+    .hud-chip {
+      background: rgba(9, 15, 26, 0.78);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+
+    .btn-primary-3d {
+      background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 55%, #4f46e5 100%);
+      border: 1px solid rgba(125, 211, 252, 0.45);
+      box-shadow: 0 6px 0 #1e3a8a, 0 14px 28px rgba(37, 99, 235, 0.45);
+      transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.08s ease;
+    }
+
+    .btn-primary-3d:hover {
+      filter: brightness(1.08);
+    }
+
+    .btn-primary-3d:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #1e3a8a, 0 6px 14px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-secondary-3d {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.32);
+      box-shadow: 0 4px 0 #0f172a;
+      transition: transform 0.08s ease, background-color 0.15s ease;
+    }
+
+    .btn-secondary-3d:hover {
+      background: rgba(51, 65, 85, 0.92);
+    }
+
+    .btn-secondary-3d:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #0f172a;
+    }
+
+    .btn-boost-3d {
+      background: linear-gradient(180deg, #f59e0b 0%, #ea580c 100%);
+      border: 1px solid rgba(253, 224, 71, 0.55);
+      box-shadow: 0 5px 0 #7c2d12, 0 10px 24px rgba(234, 88, 12, 0.4);
+      transition: transform 0.07s ease, filter 0.12s ease;
+    }
+
+    .btn-boost-3d:active,
+    .btn-boost-3d.is-active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #7c2d12;
+      filter: brightness(1.15);
+    }
+
+    #viewportWrapper {
+      position: relative;
       width: 100%;
-      max-width: 780px;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      box-shadow: 0 14px 36px rgba(15, 52, 96, 0.1);
+      aspect-ratio: 16 / 10;
+      min-height: 460px;
+      height: 72vh;
+      max-height: 80vh;
+      border-radius: 20px;
       overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: #07111e;
     }
 
-    .header {
-      padding: 22px 24px 16px;
-      text-align: center;
-      background: linear-gradient(135deg, #e3f2fd 0%, #fffde7 100%);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .badge-top {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      color: var(--primary-dark);
-      background: #ffffff;
-      border: 1px solid #bbdefb;
-      padding: 4px 10px;
-      border-radius: 999px;
-      margin-bottom: 8px;
-    }
-
-    .title {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 900;
-      color: #0b57d0;
-    }
-
-    .subtitle {
-      margin: 6px 0 0;
-      font-size: 14px;
-      color: var(--text-sub);
-    }
-
-    .content {
-      padding: 20px 24px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .panel {
-      background: #f9fcff;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 16px 18px;
-    }
-
-    .hof-panel {
-      background: #fffdf4;
-      border: 1px solid #ffe58f;
-      border-radius: 18px;
-      padding: 14px 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .hof-title {
-      font-weight: 800;
-      font-size: 15px;
-      color: #8d5b00;
-    }
-
-    .hof-sub {
-      font-size: 13px;
-      color: #7a6845;
-      margin-top: 3px;
-    }
-
-    .my-best-pill {
-      background: #ffeaa7;
-      color: #6d4c00;
-      font-weight: 800;
-      font-size: 13px;
-      padding: 6px 12px;
-      border-radius: 999px;
-    }
-
-    .lobby-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-
-    .lobby-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 800;
-      font-size: 16px;
-    }
-
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #2ecc71;
-      display: inline-block;
-    }
-
-    .room-tag {
-      background: #ffe8a3;
-      color: #6b4400;
-      font-weight: 800;
-      font-size: 13px;
-      padding: 4px 10px;
-      border-radius: 10px;
-    }
-
-    .sync-controls {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .input-sm {
-      border: 1px solid #c5d9ec;
-      border-radius: 10px;
-      padding: 7px 10px;
-      font-size: 13px;
-      font-weight: 600;
-      background: #fff;
-      color: var(--text-main);
-    }
-
-    .btn-sm {
-      border: 1px solid #b8d2ea;
-      background: #fff;
-      color: var(--primary-dark);
-      border-radius: 10px;
-      padding: 7px 12px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .btn-sm:hover {
-      background: #eef6ff;
-    }
-
-    .sync-hint {
-      font-size: 12px;
-      color: #1565c0;
-      background: #e3f2fd;
-      padding: 7px 12px;
-      border-radius: 10px;
-      margin-bottom: 12px;
-      line-height: 1.45;
-    }
-
-    .slot-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .slot-card {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 11px 14px;
-      border-radius: 14px;
-      border: 1px solid #e1ebf4;
-      background: #ffffff;
-    }
-
-    .slot-card.me {
-      border: 2px solid #ffb300;
-      background: #fffdf5;
-    }
-
-    .slot-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 800;
-    }
-
-    .tag-me {
-      background: #ffa000;
-      color: #fff;
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 8px;
-    }
-
-    .tag-peer {
-      background: #1976d2;
-      color: #fff;
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 8px;
-    }
-
-    .tag-ai {
-      background: #78909c;
-      color: #fff;
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 8px;
-    }
-
-    .slot-car {
-      font-size: 13px;
-      color: var(--text-sub);
-      font-weight: 600;
-    }
-
-    .action-row {
-      display: flex;
-      gap: 12px;
-      margin-top: 6px;
-    }
-
-    .btn-leave {
-      flex: 0 0 110px;
-      border: 1px solid #cfd8dc;
-      background: #eceff1;
-      color: #455a64;
-      font-weight: 800;
-      font-size: 15px;
-      border-radius: 16px;
-      padding: 14px;
-      cursor: pointer;
-    }
-
-    .btn-start {
-      flex: 1;
-      border: none;
-      background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
-      color: #ffffff;
-      font-weight: 900;
-      font-size: 17px;
-      border-radius: 16px;
-      padding: 14px 18px;
-      cursor: pointer;
-      box-shadow: 0 6px 16px rgba(245, 124, 0, 0.28);
-    }
-
-    .btn-start:hover {
-      filter: brightness(1.03);
-    }
-
-    #raceView {
-      display: none;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .race-hud {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #102a43;
-      color: #ffffff;
-      padding: 12px 16px;
-      border-radius: 14px;
-      font-weight: 800;
-      font-size: 14px;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    canvas {
+    #threeCanvas {
       width: 100%;
-      height: 420px;
-      border-radius: 16px;
-      border: 2px solid #90caf9;
-      background: #81d4fa;
+      height: 100%;
       display: block;
     }
 
-    .mobile-pad {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
+    .car-card {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      transition: all 0.16s ease;
     }
 
-    .pad-btn {
-      padding: 14px 10px;
-      border-radius: 14px;
-      border: 1px solid #bbdefb;
-      background: #e3f2fd;
-      color: #0d47a1;
-      font-weight: 800;
-      font-size: 15px;
-      cursor: pointer;
+    .car-card:hover {
+      border-color: rgba(56, 189, 248, 0.65);
+      transform: translateY(-2px);
     }
 
-    .pad-btn:active {
-      background: #90caf9;
-    }
-
-    .result-box {
-      display: none;
-      background: #fff8e1;
-      border: 1px solid #ffd54f;
-      border-radius: 16px;
-      padding: 16px;
-      text-align: center;
+    .car-card.selected {
+      background: linear-gradient(160deg, rgba(14, 165, 233, 0.22) 0%, rgba(30, 41, 59, 0.92) 100%);
+      border: 2px solid #38bdf8;
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.28);
     }
   </style>
 </head>
 <body>
-  <div class="app-shell">
-    <div class="header">
-      <div class="badge-top">REALTIME MULTIPLAYER &amp; RANKING</div>
-      <h1 class="title">🌴 코인 코스트 레이싱 🏎️</h1>
-      <p class="subtitle">해안도로를 달리며 동전을 모으고 최고 기록에 도전하세요!</p>
-    </div>
-
-    <div id="lobbyView" class="content">
-      <div class="hof-panel">
+  <div class="w-full max-w-6xl glass-panel rounded-3xl overflow-hidden">
+    <!-- 상단 헤더 & TOP 5 기록 바 -->
+    <header class="px-5 sm:px-7 py-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/60 bg-gradient-to-r from-slate-900/90 via-[#101c30]/90 to-slate-900/90">
+      <div class="flex items-center gap-3">
         <div>
-          <div class="hof-title">🏆 역대 최고 점수 명예의 전당</div>
-          <div id="hofSub" class="hof-sub">아직 등록된 최고 기록이 없습니다. 첫 번째 주인공이 되어보세요!</div>
+          <div class="text-[11px] font-bold tracking-[0.18em] text-sky-400 uppercase">
+            Coastal Circuit Telemetry
+          </div>
+          <h1 class="text-lg sm:text-2xl font-black tracking-tight text-white m-0">
+            COIN COAST RACING
+          </h1>
         </div>
-        <div id="myBestPill" class="my-best-pill">내 최고: 0원</div>
       </div>
 
-      <div class="panel">
-        <div class="lobby-top">
-          <div class="lobby-status">
-            <span class="dot"></span>
-            <span id="roomCountText">실시간 대기실 (1/5명 접속)</span>
-            <span id="roomBadge" class="room-tag">방 #7777</span>
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <span id="hofBadge" class="hud-chip px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-300">
+          🏆 TOP 5: 기록 없음
+        </span>
+      </div>
+    </header>
+
+    <!-- 1. 대기실 화면 -->
+    <section id="lobbyScreen" class="p-5 sm:p-7 flex flex-col gap-5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- 좌측: 방 설정 및 접속자 슬롯 -->
+        <div class="lg:col-span-7 bg-slate-900/75 border border-slate-700/60 rounded-2xl p-4 sm:p-5 flex flex-col gap-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <span id="lobbyDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+              <span id="lobbyCountLabel" class="font-extrabold text-sm sm:text-base text-white">
+                GRID LOBBY · 1/5 PLAYERS
+              </span>
+              <span id="lobbyRoomTag" class="px-2.5 py-0.5 rounded-lg text-xs font-extrabold bg-amber-400/15 text-amber-300 border border-amber-400/30">
+                ROOM #7777
+              </span>
+            </div>
           </div>
 
-          <div class="sync-controls">
-            <input id="nicknameInput" class="input-sm" type="text" maxlength="14" placeholder="닉네임" style="width: 110px;" />
-            <input id="roomInput" class="input-sm" type="text" maxlength="10" value="7777" placeholder="방 번호" style="width: 82px;" />
-            <button id="applyRoomBtn" class="btn-sm" type="button">방 입장/변경</button>
+          <div class="flex flex-wrap items-end gap-2">
+            <input
+              id="nickInput"
+              type="text"
+              maxlength="14"
+              placeholder="드라이버 이름"
+              class="flex-1 min-w-[130px] bg-slate-950/80 border border-slate-700 focus:border-sky-400 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white placeholder-slate-500 outline-none"
+            />
+            <div class="flex flex-col w-28">
+              <label for="roomInput" class="text-[10px] font-bold text-sky-300 mb-1 pl-1">
+                숫자 4자리
+              </label>
+              <input
+                id="roomInput"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                maxlength="4"
+                placeholder="숫자 4자리"
+                class="w-full bg-slate-950/80 border border-slate-700 focus:border-sky-400 rounded-xl px-3 py-2 text-sm font-semibold text-white placeholder-slate-500 outline-none"
+              />
+            </div>
+            <button
+              id="joinRoomBtn"
+              type="button"
+              class="btn-secondary-3d px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-sky-200 cursor-pointer"
+            >
+              방 입장/변경
+            </button>
+          </div>
+
+          <div id="lobbyNotice" class="text-xs text-slate-300 bg-slate-950/60 border border-slate-800 rounded-xl px-3.5 py-2.5">
+            새로고침 시 이름과 방 코드 입력란이 초기화됩니다. START를 누르면 차량 선택 후 3-2-1 카운트다운과 함께 5대 차량이 출발선에서 일자로 출발합니다.
+          </div>
+
+          <div id="lobbySlots" class="flex flex-col gap-2"></div>
+        </div>
+
+        <!-- 우측: 레이스 규칙 & 출발 버튼 -->
+        <div class="lg:col-span-5 bg-slate-900/75 border border-slate-700/60 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4">
+          <div class="flex flex-col gap-3">
+            <div class="text-xs font-extrabold tracking-wider text-sky-400 uppercase">
+              RACE RULES &amp; TELEMETRY
+            </div>
+            <div class="bg-slate-950/65 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 leading-relaxed space-y-1.5">
+              <div>⏱️ <strong class="text-white">제한 시간 120초 (2분)</strong> &amp; <strong class="text-amber-300">결승 리본 통과</strong>까지 질주</div>
+              <div>🛡️ <strong class="text-rose-400">데미지 소진 바(내구도 100%)</strong>: 장애물 충돌 시 데미지 감소, <strong class="text-rose-400">0%가 되면 즉시 게임 종료</strong></div>
+              <div>⚡ <strong class="text-amber-300">부스터 &amp; 도로 부스터 패드</strong>: <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-white">Space/W/↑</kbd> 또는 <strong class="text-amber-300">BOOST</strong> 버튼 및 도로 부스터 패드 획득 시 초고속 가속</div>
+              <div>🪙 <strong class="text-yellow-300">코인(100원 / 500원)</strong>: 500원 동전이 더 크게 표시되며 획득 사운드 제공</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 pt-1">
+            <button
+              id="leaveRoomBtn"
+              type="button"
+              class="btn-secondary-3d px-4 py-3.5 rounded-2xl text-sm font-extrabold text-slate-300 cursor-pointer"
+            >
+              나가기
+            </button>
+            <button
+              id="openCarSelectBtn"
+              type="button"
+              class="btn-primary-3d flex-1 py-3.5 px-5 rounded-2xl text-sm sm:text-base font-black text-white tracking-wide cursor-pointer"
+            >
+              START · 다같이 출발 🚀
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 차량 선택 화면 (6대 차량) -->
+    <section id="carSelectScreen" class="hidden p-5 sm:p-7 flex-col gap-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="text-xs font-extrabold tracking-widest text-sky-400 uppercase">
+            STEP 1 · SELECT YOUR MACHINE
+          </div>
+          <h2 class="text-xl sm:text-2xl font-black text-white m-0 mt-0.5">
+            출전할 자동차를 선택하세요!
+          </h2>
+        </div>
+        <button
+          id="cancelCarSelectBtn"
+          type="button"
+          class="btn-secondary-3d px-4 py-2 rounded-xl text-xs font-bold text-slate-300 cursor-pointer"
+        >
+          ← 대기실로 돌아가기
+        </button>
+      </div>
+
+      <div id="carGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5"></div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 border border-slate-700/70 rounded-2xl p-4">
+        <div class="text-xs sm:text-sm text-slate-300">
+          선택된 차량: <strong id="selectedCarSummary" class="text-sky-300 font-extrabold">에이펙스 GT-R</strong> · 마우스 드래그로 카메라 각도 조절 가능
+        </div>
+        <button
+          id="confirmGridStartBtn"
+          type="button"
+          class="btn-primary-3d px-7 py-3.5 rounded-2xl text-sm sm:text-base font-black text-white cursor-pointer"
+        >
+          3 · 2 · 1 출발선 진입 🏁
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. 레이싱 화면 -->
+    <section id="raceScreen" class="hidden p-3 sm:p-5 flex-col gap-3.5">
+      <div id="viewportWrapper">
+        <canvas id="threeCanvas"></canvas>
+
+        <!-- 상단 HUD -->
+        <div class="absolute top-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="hud-chip px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-white">
+              ⏱️ <span id="hudTimer">02:00</span>
+            </div>
+            <div class="hud-chip px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-amber-300">
+              🪙 <span id="hudScore">0원</span>
+            </div>
+            <div class="hud-chip px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-sky-300">
+              🏁 <span id="hudRank">1 / 5위</span>
+            </div>
+            <div class="hud-chip px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-emerald-300">
+              📏 <span id="hudProgress">0%</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 pointer-events-auto">
+            <button
+              id="soundToggleBtn"
+              type="button"
+              class="hud-chip hover:bg-slate-800 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 cursor-pointer"
+            >
+              🔊 SFX ON
+            </button>
+            <button
+              id="abortToLobbyBtn"
+              type="button"
+              class="hud-chip hover:bg-slate-800 px-3 py-2 rounded-xl text-xs font-bold text-rose-300 cursor-pointer"
+            >
+              대기실 복귀
+            </button>
           </div>
         </div>
 
-        <div id="syncStatusBox" class="sync-hint">
-          동일 기기 탭 동기화(BroadcastChannel) 및 공개 실시간 중계 연결 대기 중 · 같은 방 번호(#7777)로 접속해 보세요.
+        <!-- 좌측 하단 데미지 소진 바 & 부스터 게이지 (플레이 중 표시, 종료 시 숨김) -->
+        <div id="telemetryPanel" class="absolute bottom-3 left-3 z-20 w-60 sm:w-72 hud-chip rounded-2xl p-3.5 flex flex-col gap-2.5 pointer-events-none border border-rose-400/35">
+          <div>
+            <div class="flex justify-between items-center text-xs font-black mb-1">
+              <span class="text-rose-300">🛡️ 데미지 소진 바 (내구도)</span>
+              <span id="hudHpText" class="text-white tabular-nums">100%</span>
+            </div>
+            <div class="w-full h-3.5 bg-slate-900 rounded-full overflow-hidden border border-rose-400/40">
+              <div id="hudHpBar" class="h-full w-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500 transition-all duration-150"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center text-[11px] font-extrabold mb-1">
+              <span class="text-amber-300">⚡ TURBO BOOST</span>
+              <span id="hudBoostText" class="text-white tabular-nums">100%</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700/80">
+              <div id="hudBoostBar" class="h-full w-full bg-gradient-to-r from-sky-400 to-amber-400 transition-all duration-100"></div>
+            </div>
+          </div>
+
+          <div id="hudStatusPill" class="text-[11px] font-bold text-slate-300 truncate">
+            STATUS · GRID READY
+          </div>
         </div>
 
-        <div id="slotList" class="slot-list"></div>
+        <!-- 우측 하단 속도계 -->
+        <div class="hidden sm:flex flex-col items-end justify-end absolute bottom-3 right-3 hud-chip rounded-2xl px-4 py-2.5 pointer-events-none">
+          <div id="hudSpeedNum" class="text-2xl font-black tracking-tight text-white tabular-nums">0</div>
+          <div class="text-[10px] font-extrabold tracking-widest text-sky-400">KM/H</div>
+        </div>
+
+        <!-- 3-2-1 카운트다운 오버레이 -->
+        <div
+          id="countdownOverlay"
+          class="hidden absolute inset-0 bg-slate-950/55 backdrop-blur-[2px] flex flex-col items-center justify-center pointer-events-none"
+        >
+          <div class="text-xs font-extrabold tracking-[0.25em] text-sky-300 uppercase mb-1">
+            STARTING GRID LOCKED
+          </div>
+          <div id="countdownNumber" class="text-7xl sm:text-8xl font-black text-white drop-shadow-[0_8px_28px_rgba(56,189,248,0.75)]">
+            3
+          </div>
+        </div>
+
+        <!-- 레이스 종료 결과 오버레이 -->
+        <div
+          id="endOverlay"
+          class="hidden absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
+        >
+          <div class="w-full max-w-md glass-panel rounded-3xl p-6 text-center border border-slate-600/60">
+            <div id="endBadge" class="inline-block px-3 py-1 rounded-full text-xs font-extrabold bg-amber-400/20 text-amber-300 mb-2">
+              FINISH LINE
+            </div>
+            <h3 id="endTitle" class="text-2xl font-black text-white m-0">레이스 완료!</h3>
+            <p id="endSubtitle" class="text-sm text-slate-300 mt-1.5 mb-3"></p>
+            <div id="endSummaryMetrics" class="grid grid-cols-3 gap-2 bg-slate-950/80 border border-slate-800 rounded-2xl p-3 mb-3 text-center">
+              <div>
+                <div class="text-[10px] text-slate-400 font-bold">아이디</div>
+                <div id="endDriverId" class="text-xs sm:text-sm font-black text-sky-300 truncate">-</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-400 font-bold">기록 시간</div>
+                <div id="endElapsedTime" class="text-xs sm:text-sm font-black text-emerald-300">-</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-400 font-bold">최종 점수</div>
+                <div id="endFinalScore" class="text-xs sm:text-sm font-black text-amber-300">-</div>
+              </div>
+            </div>
+            <div id="endStandings" class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3 mb-5 text-left text-xs space-y-1.5"></div>
+            <div class="flex gap-2.5">
+              <button
+                id="raceAgainBtn"
+                type="button"
+                class="btn-secondary-3d flex-1 py-3 rounded-2xl text-sm font-extrabold text-sky-200 cursor-pointer"
+              >
+                차량 다시 선택
+              </button>
+              <button
+                id="backToLobbyBtn"
+                type="button"
+                class="btn-primary-3d flex-1 py-3 rounded-2xl text-sm font-black text-white cursor-pointer"
+              >
+                대기실로
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="action-row">
-        <button id="leaveBtn" class="btn-leave" type="button">나가기</button>
-        <button id="startBtn" class="btn-start" type="button">START! 다같이 출발 🚀</button>
+      <!-- 하단 조작 컨트롤 패드 -->
+      <div class="grid grid-cols-3 gap-3">
+        <button
+          id="ctrlLeftBtn"
+          type="button"
+          class="btn-secondary-3d py-3.5 px-4 rounded-2xl text-sm sm:text-base font-extrabold text-white cursor-pointer"
+        >
+          ◀ 좌측 조향
+        </button>
+        <button
+          id="ctrlBoostBtn"
+          type="button"
+          class="btn-boost-3d py-3.5 px-4 rounded-2xl text-sm sm:text-base font-black text-white cursor-pointer"
+        >
+          ⚡ BOOST (가속)
+        </button>
+        <button
+          id="ctrlRightBtn"
+          type="button"
+          class="btn-secondary-3d py-3.5 px-4 rounded-2xl text-sm sm:text-base font-extrabold text-white cursor-pointer"
+        >
+          우측 조향 ▶
+        </button>
       </div>
-    </div>
-
-    <div id="raceView" class="content">
-      <div class="race-hud">
-        <span id="hudTime">⏱️ 남은 시간: 35초</span>
-        <span id="hudScore">🪙 내 점수: 0원</span>
-        <span id="hudRank">🏁 순위: 1위</span>
-        <button id="backLobbyBtn" class="btn-sm" type="button">대기실로</button>
-      </div>
-
-      <canvas id="gameCanvas" width="730" height="420"></canvas>
-
-      <div class="mobile-pad">
-        <button id="leftBtn" class="pad-btn" type="button">⬅️ 왼쪽</button>
-        <button id="boostBtn" class="pad-btn" type="button">⚡ 부스터</button>
-        <button id="rightBtn" class="pad-btn" type="button">오른쪽 ➡️</button>
-      </div>
-
-      <div id="resultBox" class="result-box">
-        <h3 id="resultTitle" style="margin: 0 0 6px;">레이스 종료!</h3>
-        <p id="resultDetail" style="margin: 0 0 12px;"></p>
-        <button id="replayBtn" class="btn-start" type="button" style="padding: 10px 18px; font-size: 15px;">다시 대기실로</button>
-      </div>
-    </div>
+    </section>
   </div>
 
+  <!-- 알림 토스트 메시지 박스 -->
+  <div
+    id="toastBox"
+    class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-slate-900/95 border border-sky-400/50 text-xs sm:text-sm font-bold text-white shadow-2xl"
+  ></div>
+
   <script>
-    const AI_NAMES = [
-      { name: "AI_파도타기", car: "페라리 GT", color: "#ef5350" },
-      { name: "AI_갈매기", car: "오프로드 SUV", color: "#26a69a" },
-      { name: "AI_썬셋드라이버", car: "해변 오픈카", color: "#ab47bc" },
-      { name: "AI_코코넛", car: "서핑 캠퍼밴", color: "#ffa726" }
-    ];
+    (function () {
+      const CAR_ROSTER = [
+        {
+          id: "apex_gt",
+          name: "에이펙스 GT-R",
+          tag: "밸런스 스포츠카",
+          cssHex: "#38bdf8",
+          bodyColor: 0x0284c7,
+          accentColor: 0xfef08a,
+          topSpeed: 196,
+          handling: 1.05,
+          boostPower: 1.45
+        },
+        {
+          id: "cobalt_f1",
+          name: "코발트 포뮬러",
+          tag: "초고속 머신",
+          cssHex: "#ef4444",
+          bodyColor: 0xdc2626,
+          accentColor: 0xf8fafc,
+          topSpeed: 212,
+          handling: 1.15,
+          boostPower: 1.55
+        },
+        {
+          id: "sunset_spyder",
+          name: "선셋 스파이더",
+          tag: "민첩한 코너러",
+          cssHex: "#f59e0b",
+          bodyColor: 0xd97706,
+          accentColor: 0xfef9c3,
+          topSpeed: 190,
+          handling: 1.24,
+          boostPower: 1.42
+        },
+        {
+          id: "dune_titan",
+          name: "듄 타이탄 SUV",
+          tag: "고출력 부스터",
+          cssHex: "#10b981",
+          bodyColor: 0x059669,
+          accentColor: 0x38bdf8,
+          topSpeed: 188,
+          handling: 0.96,
+          boostPower: 1.68
+        },
+        {
+          id: "phantom_rs",
+          name: "팬텀 RS 쿠페",
+          tag: "하이엔드 그랜드투어러",
+          cssHex: "#a855f7",
+          bodyColor: 0x9333ea,
+          accentColor: 0xfacc15,
+          topSpeed: 204,
+          handling: 1.1,
+          boostPower: 1.5
+        },
+        {
+          id: "wave_cruiser",
+          name: "웨이브 크루저",
+          tag: "해안 장거리 투어러",
+          cssHex: "#ec4899",
+          bodyColor: 0xdb2777,
+          accentColor: 0xbae6fd,
+          topSpeed: 194,
+          handling: 1.12,
+          boostPower: 1.48
+        }
+      ];
 
-    const CARS = ["F1 포뮬러", "페라리 GT", "오프로드 SUV", "해변 오픈카"];
-    const PUBLIC_WS_ENDPOINTS = [
-      "wss://coinracing-uxuc.onrender.com",
-      "wss://ws.ifelse.io",
-      "wss://socketsbay.com/wss/v2/1/demo/"
-    ];
+      const AI_BOTS = [
+        { name: "AI_카이", carId: "cobalt_f1", laneOffset: -5.4, pace: 0.94 },
+        { name: "AI_소라", carId: "sunset_spyder", laneOffset: -2.7, pace: 0.98 },
+        { name: "AI_맥스", carId: "dune_titan", laneOffset: 2.7, pace: 0.91 },
+        { name: "AI_루나", carId: "apex_gt", laneOffset: 5.4, pace: 0.96 }
+      ];
 
-    const clientId = "p_" + Math.random().toString(36).slice(2, 9);
-    let myNickname = localStorage.getItem("ccr_nick") || ("카레이서_" + Math.floor(10 + Math.random() * 89));
-    let myCar = CARS[Math.floor(Math.random() * CARS.length)];
-    let roomCode = (localStorage.getItem("ccr_room") || "7777").trim() || "7777";
-    let bestScore = Number(localStorage.getItem("ccr_best") || "0") || 0;
-    let hallOfFame = JSON.parse(localStorage.getItem("ccr_hof") || "null");
+      const RACE_DURATION_SEC = 120;
+      const TRACK_LENGTH = 4600;
+      const ROAD_HALF_WIDTH = 10.4;
 
-    // roomCode -> Map(clientId -> playerInfo)
-    const remotePlayers = new Map();
-    let wsSocket = null;
-    let wsConnected = false;
-    let channel = null;
+      try {
+        localStorage.removeItem("ccr_3d_nick");
+        localStorage.removeItem("ccr_3d_room");
+      } catch (_) {}
 
-    // Game state
-    let gameRunning = false;
-    let raceTimer = 35;
-    let lastFrameTime = 0;
-    let lastBroadcastTime = 0;
-    let keys = { left: false, right: false, boost: false };
+      const clientId = "drv_" + Math.random().toString(36).slice(2, 8);
+      let myNickname = "드라이버_" + Math.floor(100 + Math.random() * 899);
+      let roomCode = "7777";
+      let isInRoom = true;
+      let selectedCar = CAR_ROSTER[0];
+      let courseSeed = Math.floor(Math.random() * 1000000);
+      let activeCourseTheme = null;
 
-    let player = {
-      x: 365,
-      y: 345,
-      vx: 0,
-      score: 0,
-      progress: 0,
-      boost: 100
-    };
+      let top5Leaderboard = [];
+      try {
+        const parsedTop5 = JSON.parse(localStorage.getItem("ccr_3d_top5") || "[]");
+        if (Array.isArray(parsedTop5)) {
+          top5Leaderboard = parsedTop5.slice(0, 5);
+        }
+      } catch (_) {}
 
-    let coins = [];
-    let aiRacers = [];
+      const remotePeers = new Map();
+      let broadcastChannel = null;
+      let soundEnabled = true;
+      let audioReady = false;
+      let firestoreDb = null;
+      let cloudLeaderboardDocRef = null;
+      let cloudUnsubscribeLeaderboard = null;
+      let cloudUnsubscribeRoom = null;
 
-    const nicknameInput = document.getElementById("nicknameInput");
-    const roomInput = document.getElementById("roomInput");
-    const applyRoomBtn = document.getElementById("applyRoomBtn");
-    const startBtn = document.getElementById("startBtn");
-    const leaveBtn = document.getElementById("leaveBtn");
-    const backLobbyBtn = document.getElementById("backLobbyBtn");
-    const replayBtn = document.getElementById("replayBtn");
-    const slotList = document.getElementById("slotList");
-    const roomCountText = document.getElementById("roomCountText");
-    const roomBadge = document.getElementById("roomBadge");
-    const syncStatusBox = document.getElementById("syncStatusBox");
-    const myBestPill = document.getElementById("myBestPill");
-    const hofSub = document.getElementById("hofSub");
+      let coinSynth = null;
+      let bigCoinSynth = null;
+      let hazardSynth = null;
+      let countdownSynth = null;
+      let goSynth = null;
 
-    const lobbyView = document.getElementById("lobbyView");
-    const raceView = document.getElementById("raceView");
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+      let phase = "LOBBY";
+      let countdownValue = 3;
+      let countdownTimer = 0;
+      let raceElapsed = 0;
+      let timeLeft = RACE_DURATION_SEC;
+      let lastFrameMs = 0;
+      let lastNetSyncMs = 0;
+      let animLoopRequestId = 0;
 
-    function initInputs() {
-      nicknameInput.value = myNickname;
-      roomInput.value = roomCode;
-      updateHofUI();
-    }
-
-    function updateHofUI() {
-      myBestPill.textContent = "내 최고: " + bestScore.toLocaleString() + "원";
-      if (hallOfFame && hallOfFame.score > 0) {
-        hofSub.textContent = "1위 " + hallOfFame.name + " · " + Number(hallOfFame.score).toLocaleString() + "원 (방 #" + hallOfFame.room + ")";
-      } else {
-        hofSub.textContent = "아직 등록된 최고 기록이 없습니다. 첫 번째 주인공이 되어보세요!";
-      }
-    }
-
-    function saveScore(score) {
-      if (score > bestScore) {
-        bestScore = score;
-        localStorage.setItem("ccr_best", String(bestScore));
-      }
-      if (!hallOfFame || score > hallOfFame.score) {
-        hallOfFame = { name: myNickname, score: score, room: roomCode };
-        localStorage.setItem("ccr_hof", JSON.stringify(hallOfFame));
-      }
-      updateHofUI();
-    }
-
-    function sendPacket(type, payload = {}) {
-      const msg = {
-        type,
-        clientId,
-        name: myNickname,
-        car: myCar,
-        room: roomCode,
-        ts: Date.now(),
-        ...payload
+      const inputState = {
+        left: false,
+        right: false,
+        boost: false
       };
 
-      if (channel) {
-        try {
-          channel.postMessage(msg);
-        } catch (_) {}
-      }
-
-      if (wsSocket && wsSocket.readyState === WebSocket.OPEN) {
-        try {
-          wsSocket.send(JSON.stringify(msg));
-        } catch (_) {}
-      }
-    }
-
-    function handleIncomingPacket(raw) {
-      let data = raw;
-      if (typeof raw === "string") {
-        try {
-          data = JSON.parse(raw);
-        } catch (_) {
-          return;
-        }
-      }
-      if (!data || typeof data !== "object") return;
-      if (!data.clientId || data.clientId === clientId) return;
-      if (String(data.room || "") !== String(roomCode)) return;
-
-      if (data.type === "LEAVE") {
-        remotePlayers.delete(data.clientId);
-        renderLobby();
-        return;
-      }
-
-      remotePlayers.set(data.clientId, {
-        clientId: data.clientId,
-        name: data.name || "플레이어",
-        car: data.car || "해변 오픈카",
-        score: Number(data.score || 0),
-        progress: Number(data.progress || 0),
-        x: Number(data.x || 365),
-        lastSeen: Date.now()
-      });
-
-      if (data.type === "START_RACE" && !gameRunning) {
-        startRaceLocal(false);
-      }
-
-      renderLobby();
-    }
-
-    function setupBroadcastChannel() {
-      if ("BroadcastChannel" in window) {
-        if (channel) channel.close();
-        channel = new BroadcastChannel("coin_coast_racing_" + roomCode);
-        channel.onmessage = (ev) => handleIncomingPacket(ev.data);
-      }
-    }
-
-    function connectPublicWebSocket() {
-      if (wsSocket) {
-        try { wsSocket.close(); } catch (_) {}
-        wsSocket = null;
-      }
-      wsConnected = false;
-      updateSyncStatus();
-
-      let idx = 0;
-      const tryNext = () => {
-        if (idx >= PUBLIC_WS_ENDPOINTS.length) {
-          wsConnected = false;
-          updateSyncStatus();
-          return;
-        }
-        const url = PUBLIC_WS_ENDPOINTS[idx++];
-        try {
-          const sock = new WebSocket(url);
-          const timer = setTimeout(() => {
-            if (sock.readyState !== WebSocket.OPEN) {
-              try { sock.close(); } catch (_) {}
-            }
-          }, 3000);
-
-          sock.onopen = () => {
-            clearTimeout(timer);
-            wsSocket = sock;
-            wsConnected = true;
-            updateSyncStatus();
-            sendPacket("HELLO", { score: player.score, progress: player.progress, x: player.x });
-          };
-
-          sock.onmessage = (ev) => {
-            handleIncomingPacket(ev.data);
-          };
-
-          sock.onerror = () => {
-            clearTimeout(timer);
-          };
-
-          sock.onclose = () => {
-            clearTimeout(timer);
-            if (wsSocket === sock) {
-              wsSocket = null;
-              wsConnected = false;
-              updateSyncStatus();
-              setTimeout(tryNext, 2500);
-            }
-          };
-        } catch (_) {
-          tryNext();
-        }
-      };
-
-      tryNext();
-    }
-
-    function updateSyncStatus() {
-      const wsLabel = wsConnected
-        ? "공개 실시간 중계 연결됨 (다른 기기 동기화 활성)"
-        : "공개 중계 재연결 중 · 동일 탭 동기화 및 AI 매칭 동작 중";
-      syncStatusBox.textContent = wsLabel + " · 현재 방 #" + roomCode + "에서 다른 기기도 같은 방 번호로 입장하세요.";
-    }
-
-    function pruneStalePeers() {
-      const now = Date.now();
-      let changed = false;
-      for (const [id, info] of remotePlayers.entries()) {
-        if (now - info.lastSeen > 12000) {
-          remotePlayers.delete(id);
-          changed = true;
-        }
-      }
-      if (changed) renderLobby();
-    }
-
-    function renderLobby() {
-      roomBadge.textContent = "방 #" + roomCode;
-      const peers = Array.from(remotePlayers.values()).slice(0, 4);
-      const humanCount = 1 + peers.length;
-      roomCountText.textContent = "실시간 대기실 (" + humanCount + "/5명 접속)";
-
-      slotList.innerHTML = "";
-
-      // 1P (Me)
-      const meEl = document.createElement("div");
-      meEl.className = "slot-card me";
-      meEl.innerHTML = `
-        <div class="slot-left">
-          <span class="tag-me">나 (1P)</span>
-          <span>${escapeHtml(myNickname)}</span>
-        </div>
-        <div class="slot-car">${escapeHtml(myCar)}</div>
-      `;
-      slotList.appendChild(meEl);
-
-      // Remote peers
-      peers.forEach((p) => {
-        const peerEl = document.createElement("div");
-        peerEl.className = "slot-card";
-        peerEl.innerHTML = `
-          <div class="slot-left">
-            <span class="tag-peer">동시접속</span>
-            <span>${escapeHtml(p.name)}</span>
-          </div>
-          <div class="slot-car">${escapeHtml(p.car)} · ${p.score.toLocaleString()}원</div>
-        `;
-        slotList.appendChild(peerEl);
-      });
-
-      // Fill remaining up to 5 slots with AI
-      const aiNeeded = Math.max(0, 5 - humanCount);
-      for (let i = 0; i < aiNeeded; i++) {
-        const ai = AI_NAMES[i % AI_NAMES.length];
-        const aiEl = document.createElement("div");
-        aiEl.className = "slot-card";
-        aiEl.innerHTML = `
-          <div class="slot-left">
-            <span class="tag-ai">AI 로봇</span>
-            <span>${escapeHtml(ai.name)}</span>
-          </div>
-          <div class="slot-car">${escapeHtml(ai.car)}</div>
-        `;
-        slotList.appendChild(aiEl);
-      }
-    }
-
-    function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
-
-    function setupRaceEntities() {
-      player = {
-        x: canvas.width / 2,
-        y: canvas.height - 65,
+      const carState = {
+        x: 0,
         vx: 0,
+        z: -4,
+        speed: 0,
         score: 0,
-        progress: 0,
-        boost: 100
+        hp: 100,
+        boost: 100,
+        spinTimer: 0,
+        slowTimer: 0,
+        padBoostTimer: 0,
+        cameraYawOffset: 0,
+        cameraPitchOffset: 0,
+        shake: 0
       };
-      raceTimer = 35;
 
-      coins = [];
-      for (let i = 0; i < 14; i++) {
-        coins.push(createCoin(true));
+      let isDraggingCam = false;
+      let lastPointerX = 0;
+      let lastPointerY = 0;
+      let smoothCamLookX = 0;
+      let smoothCamLookY = 0.4;
+      let smoothCamLookZ = -16;
+      let smoothCamHeight = 14.5;
+
+      let scene = null;
+      let camera = null;
+      let renderer = null;
+      let playerCarGroup = null;
+      let playerWheels = [];
+      let boostFlameMesh = null;
+      let finishRibbonGroup = null;
+      let coursePropsGroup = null;
+      let roadSegments = [];
+      let coinEntities = [];
+      let hazardEntities = [];
+      let boosterPadEntities = [];
+      let aiEntities = [];
+
+      const lobbyScreen = document.getElementById("lobbyScreen");
+      const carSelectScreen = document.getElementById("carSelectScreen");
+      const raceScreen = document.getElementById("raceScreen");
+      const viewportWrapper = document.getElementById("viewportWrapper");
+      const threeCanvas = document.getElementById("threeCanvas");
+
+      const nickInput = document.getElementById("nickInput");
+      const roomInput = document.getElementById("roomInput");
+      const joinRoomBtn = document.getElementById("joinRoomBtn");
+      const leaveRoomBtn = document.getElementById("leaveRoomBtn");
+      const openCarSelectBtn = document.getElementById("openCarSelectBtn");
+      const cancelCarSelectBtn = document.getElementById("cancelCarSelectBtn");
+      const confirmGridStartBtn = document.getElementById("confirmGridStartBtn");
+      const abortToLobbyBtn = document.getElementById("abortToLobbyBtn");
+      const raceAgainBtn = document.getElementById("raceAgainBtn");
+      const backToLobbyBtn = document.getElementById("backToLobbyBtn");
+      const soundToggleBtn = document.getElementById("soundToggleBtn");
+
+      const lobbyDot = document.getElementById("lobbyDot");
+      const lobbyCountLabel = document.getElementById("lobbyCountLabel");
+      const lobbyRoomTag = document.getElementById("lobbyRoomTag");
+      const lobbySlots = document.getElementById("lobbySlots");
+      const carGrid = document.getElementById("carGrid");
+      const selectedCarSummary = document.getElementById("selectedCarSummary");
+      const hofBadge = document.getElementById("hofBadge");
+
+      const hudTimer = document.getElementById("hudTimer");
+      const hudScore = document.getElementById("hudScore");
+      const hudRank = document.getElementById("hudRank");
+      const hudProgress = document.getElementById("hudProgress");
+      const hudHpText = document.getElementById("hudHpText");
+      const hudHpBar = document.getElementById("hudHpBar");
+      const hudBoostText = document.getElementById("hudBoostText");
+      const hudBoostBar = document.getElementById("hudBoostBar");
+      const telemetryPanel = document.getElementById("telemetryPanel");
+      const hudStatusPill = document.getElementById("hudStatusPill");
+      const hudSpeedNum = document.getElementById("hudSpeedNum");
+
+      const countdownOverlay = document.getElementById("countdownOverlay");
+      const countdownNumber = document.getElementById("countdownNumber");
+      const endOverlay = document.getElementById("endOverlay");
+      const endBadge = document.getElementById("endBadge");
+      const endTitle = document.getElementById("endTitle");
+      const endSubtitle = document.getElementById("endSubtitle");
+      const endDriverId = document.getElementById("endDriverId");
+      const endElapsedTime = document.getElementById("endElapsedTime");
+      const endFinalScore = document.getElementById("endFinalScore");
+      const endStandings = document.getElementById("endStandings");
+
+      const ctrlLeftBtn = document.getElementById("ctrlLeftBtn");
+      const ctrlRightBtn = document.getElementById("ctrlRightBtn");
+      const ctrlBoostBtn = document.getElementById("ctrlBoostBtn");
+      const toastBox = document.getElementById("toastBox");
+
+      let toastTimer = null;
+
+      function showToast(message) {
+        toastBox.textContent = message;
+        toastBox.classList.remove("hidden");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toastBox.classList.add("hidden");
+        }, 2400);
       }
 
-      const humanCount = 1 + Math.min(4, remotePlayers.size);
-      const aiCount = Math.max(0, 5 - humanCount);
-      aiRacers = [];
-      for (let i = 0; i < aiCount; i++) {
-        const meta = AI_NAMES[i % AI_NAMES.length];
-        aiRacers.push({
-          name: meta.name,
-          car: meta.car,
-          color: meta.color,
-          x: 170 + i * 95,
-          y: 120 + (i % 2) * 55,
-          score: 0,
-          progress: 0,
-          targetX: 220 + i * 70,
-          dirTimer: 0.6 + i * 0.3
+      async function ensureAudioContext() {
+        if (!soundEnabled || typeof Tone === "undefined") return;
+        try {
+          if (Tone.context.state !== "running") {
+            await Tone.start();
+          }
+          if (!audioReady) {
+            coinSynth = new Tone.Synth({
+              oscillator: { type: "triangle" },
+              envelope: { attack: 0.005, decay: 0.12, sustain: 0.02, release: 0.12 }
+            }).toDestination();
+
+            bigCoinSynth = new Tone.PolySynth(Tone.Synth, {
+              oscillator: { type: "sine" },
+              envelope: { attack: 0.005, decay: 0.18, sustain: 0.05, release: 0.2 }
+            }).toDestination();
+
+            hazardSynth = new Tone.MembraneSynth({
+              pitchDecay: 0.06,
+              octaves: 3,
+              oscillator: { type: "sawtooth" },
+              envelope: { attack: 0.004, decay: 0.22, sustain: 0.02, release: 0.18 }
+            }).toDestination();
+
+            countdownSynth = new Tone.Synth({
+              oscillator: { type: "sine" },
+              envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+
+            goSynth = new Tone.Synth({
+              oscillator: { type: "triangle" },
+              envelope: { attack: 0.005, decay: 0.24, sustain: 0.05, release: 0.2 }
+            }).toDestination();
+
+            audioReady = true;
+          }
+        } catch (_) {}
+      }
+
+      function playCoinSfx(isBig) {
+        if (!soundEnabled || !audioReady) return;
+        try {
+          const now = Tone.now();
+          if (isBig && bigCoinSynth) {
+            bigCoinSynth.triggerAttackRelease(["C6", "E6", "G6"], "16n", now);
+          } else if (coinSynth) {
+            coinSynth.triggerAttackRelease("A5", "16n", now);
+          }
+        } catch (_) {}
+      }
+
+      function playHazardSfx() {
+        if (!soundEnabled || !audioReady || !hazardSynth) return;
+        try {
+          hazardSynth.triggerAttackRelease("C2", "8n", Tone.now());
+        } catch (_) {}
+      }
+
+      function playCountdownSfx(isGo) {
+        if (!soundEnabled || !audioReady) return;
+        try {
+          const now = Tone.now();
+          if (isGo && goSynth) {
+            goSynth.triggerAttackRelease("G5", "8n", now);
+          } else if (countdownSynth) {
+            countdownSynth.triggerAttackRelease("E5", "16n", now);
+          }
+        } catch (_) {}
+      }
+
+      function handleSyncMessage(rawMsg) {
+        if (!isInRoom) return;
+        const msg = rawMsg && typeof rawMsg === "object" ? rawMsg : null;
+        if (!msg || !msg.senderId || msg.senderId === clientId) return;
+        if (String(msg.room || "") !== String(roomCode)) return;
+
+        if (msg.type === "LEAVE") {
+          remotePeers.delete(msg.senderId);
+          renderLobbySlots();
+          return;
+        }
+
+        remotePeers.set(msg.senderId, {
+          senderId: msg.senderId,
+          name: msg.name || "드라이버",
+          carId: msg.carId || selectedCar.id,
+          score: Number(msg.score || 0),
+          z: Number(msg.z || -4),
+          hp: Number(msg.hp || 100),
+          lastSeen: Date.now()
+        });
+
+        if (msg.type === "GRID_START" && phase === "LOBBY") {
+          if (msg.carId) {
+            const matched = CAR_ROSTER.find((c) => c.id === msg.carId);
+            if (matched) selectedCar = matched;
+          }
+          if (typeof msg.courseSeed === "number") {
+            courseSeed = msg.courseSeed;
+          }
+          beginRaceLoop();
+          return;
+        }
+
+        if (phase === "LOBBY") {
+          renderLobbySlots();
+        }
+      }
+
+      function bindRoomChannel() {
+        if (broadcastChannel) {
+          try {
+            broadcastChannel.close();
+          } catch (_) {}
+          broadcastChannel = null;
+        }
+        if (typeof BroadcastChannel !== "undefined") {
+          try {
+            broadcastChannel = new BroadcastChannel("coin_coast_racing_3d_room_" + roomCode);
+            broadcastChannel.onmessage = (event) => handleSyncMessage(event.data);
+          } catch (_) {}
+        }
+        bindCloudRoomSync();
+      }
+
+      function sendSyncMessage(type, extra = {}) {
+        if (!isInRoom && type !== "LEAVE") return;
+        const payload = {
+          type,
+          senderId: clientId,
+          name: myNickname,
+          carId: selectedCar.id,
+          room: roomCode,
+          courseSeed,
+          score: carState.score,
+          z: carState.z,
+          hp: carState.hp,
+          ts: Date.now(),
+          ...extra
+        };
+        if (broadcastChannel) {
+          try {
+            broadcastChannel.postMessage(payload);
+          } catch (_) {}
+        }
+        syncCloudRoomPresence(payload);
+      }
+
+      async function initCloudPersistence() {
+        try {
+          if (typeof window.__firebase_config === "undefined" || !window.__firebase_config) return;
+          const appMod = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+          const authMod = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+          const fsMod = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+          const appId = typeof window.__app_id !== "undefined" ? window.__app_id : "coin-coast-racing";
+          const firebaseConfig = typeof window.__firebase_config === "string"
+            ? JSON.parse(window.__firebase_config)
+            : window.__firebase_config;
+
+          const app = appMod.initializeApp(firebaseConfig);
+          const auth = authMod.getAuth(app);
+          if (typeof window.__initial_auth_token !== "undefined" && window.__initial_auth_token) {
+            await authMod.signInWithCustomToken(auth, window.__initial_auth_token);
+          } else {
+            await authMod.signInAnonymously(auth);
+          }
+          if (!auth.currentUser) return;
+
+          firestoreDb = fsMod.getFirestore(app);
+          cloudLeaderboardDocRef = fsMod.doc(firestoreDb, "artifacts", appId, "public", "data", "leaderboard", "top5");
+
+          if (cloudUnsubscribeLeaderboard) cloudUnsubscribeLeaderboard();
+          cloudUnsubscribeLeaderboard = fsMod.onSnapshot(
+            cloudLeaderboardDocRef,
+            (snap) => {
+              if (!snap.exists()) return;
+              const data = snap.data();
+              if (Array.isArray(data.entries) && data.entries.length > 0) {
+                top5Leaderboard = data.entries
+                  .slice()
+                  .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+                  .slice(0, 5);
+                try {
+                  localStorage.setItem("ccr_3d_top5", JSON.stringify(top5Leaderboard));
+                } catch (_) {}
+                refreshRecordBadges();
+              }
+            },
+            () => {}
+          );
+
+          bindCloudRoomSync();
+        } catch (_) {}
+      }
+
+      async function bindCloudRoomSync() {
+        if (!firestoreDb) return;
+        try {
+          const fsMod = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+          const appId = typeof window.__app_id !== "undefined" ? window.__app_id : "coin-coast-racing";
+          if (cloudUnsubscribeRoom) {
+            cloudUnsubscribeRoom();
+            cloudUnsubscribeRoom = null;
+          }
+          if (!isInRoom) return;
+
+          const cloudRoomDocRef = fsMod.doc(firestoreDb, "artifacts", appId, "public", "data", "rooms", String(roomCode));
+          cloudUnsubscribeRoom = fsMod.onSnapshot(
+            cloudRoomDocRef,
+            (snap) => {
+              if (!snap.exists() || !isInRoom) return;
+              const data = snap.data();
+              const playersObj = data.players || {};
+              const now = Date.now();
+              Object.values(playersObj).forEach((p) => {
+                if (!p || !p.senderId || p.senderId === clientId) return;
+                if (now - Number(p.ts || 0) > 20000) return;
+                remotePeers.set(p.senderId, {
+                  senderId: p.senderId,
+                  name: p.name || "드라이버",
+                  carId: p.carId || selectedCar.id,
+                  score: Number(p.score || 0),
+                  z: Number(p.z || -4),
+                  hp: Number(p.hp || 100),
+                  lastSeen: now
+                });
+              });
+
+              if (data.lastAction && data.lastAction.type === "GRID_START" && data.lastAction.senderId !== clientId) {
+                const actionAge = now - Number(data.lastAction.ts || 0);
+                if (actionAge < 8000 && phase === "LOBBY") {
+                  if (data.lastAction.carId) {
+                    const matched = CAR_ROSTER.find((c) => c.id === data.lastAction.carId);
+                    if (matched) selectedCar = matched;
+                  }
+                  if (typeof data.lastAction.courseSeed === "number") {
+                    courseSeed = data.lastAction.courseSeed;
+                  }
+                  beginRaceLoop();
+                  return;
+                }
+              }
+
+              if (phase === "LOBBY") {
+                renderLobbySlots();
+              }
+            },
+            () => {}
+          );
+        } catch (_) {}
+      }
+
+      async function syncCloudRoomPresence(payload) {
+        if (!firestoreDb) return;
+        try {
+          const fsMod = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+          const appId = typeof window.__app_id !== "undefined" ? window.__app_id : "coin-coast-racing";
+          const targetRoomRef = fsMod.doc(firestoreDb, "artifacts", appId, "public", "data", "rooms", String(payload.room || roomCode));
+          if (payload.type === "LEAVE") {
+            await fsMod.setDoc(
+              targetRoomRef,
+              {
+                players: { [clientId]: fsMod.deleteField() },
+                updatedAt: Date.now()
+              },
+              { merge: true }
+            );
+            return;
+          }
+          const updateObj = {
+            players: {
+              [clientId]: {
+                senderId: clientId,
+                name: myNickname,
+                carId: selectedCar.id,
+                score: Number(payload.score || 0),
+                z: Number(payload.z || -4),
+                hp: Number(payload.hp ?? 100),
+                ts: Date.now()
+              }
+            },
+            updatedAt: Date.now()
+          };
+          if (payload.type === "GRID_START") {
+            updateObj.lastAction = {
+              type: "GRID_START",
+              senderId: clientId,
+              carId: selectedCar.id,
+              courseSeed: payload.courseSeed,
+              ts: Date.now()
+            };
+          }
+          await fsMod.setDoc(targetRoomRef, updateObj, { merge: true });
+        } catch (_) {}
+      }
+
+      async function saveLeaderboardToCloud(entries) {
+        if (!firestoreDb || !cloudLeaderboardDocRef) return;
+        try {
+          const fsMod = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+          await fsMod.setDoc(cloudLeaderboardDocRef, { entries, updatedAt: Date.now() }, { merge: true });
+        } catch (_) {}
+      }
+
+      function refreshRecordBadges() {
+        if (!top5Leaderboard || top5Leaderboard.length === 0) {
+          hofBadge.textContent = "🏆 TOP 5: 기록 없음";
+          return;
+        }
+        const summary = top5Leaderboard
+          .slice(0, 5)
+          .map((entry, idx) => `${idx + 1}위 ${entry.name} ${Number(entry.score || 0).toLocaleString()}원`)
+          .join(" · ");
+        hofBadge.textContent = "🏆 TOP 5: " + summary;
+      }
+
+      function recordRunScore(score) {
+        if (score <= 0) {
+          refreshRecordBadges();
+          return;
+        }
+        top5Leaderboard.push({
+          name: myNickname,
+          score: Number(score),
+          carName: selectedCar.name,
+          room: roomCode,
+          timeSec: Math.round(raceElapsed)
+        });
+        top5Leaderboard.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+        top5Leaderboard = top5Leaderboard.slice(0, 5);
+        try {
+          localStorage.setItem("ccr_3d_top5", JSON.stringify(top5Leaderboard));
+        } catch (_) {}
+        refreshRecordBadges();
+        saveLeaderboardToCloud(top5Leaderboard);
+      }
+
+      function createCarIllustrationSvg(car) {
+        return `
+          <svg viewBox="0 0 220 96" class="w-full h-24 rounded-xl bg-slate-950/85 border border-slate-800 px-3 py-1" role="img" aria-label="${escapeHtml(car.name)} 일러스트">
+            <defs>
+              <linearGradient id="bodyGrad_${car.id}" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.32" />
+                <stop offset="45%" stop-color="${car.cssHex}" stop-opacity="1" />
+                <stop offset="100%" stop-color="#0f172a" stop-opacity="0.55" />
+              </linearGradient>
+            </defs>
+            <ellipse cx="110" cy="80" rx="80" ry="8" fill="rgba(2, 6, 23, 0.92)" />
+            <path d="M28 65 L34 52 L54 44 L86 32 L134 32 L166 44 L190 54 L194 66 L182 69 L38 69 Z" fill="url(#bodyGrad_${car.id})" stroke="#e2e8f0" stroke-opacity="0.35" stroke-width="1" />
+            <path d="M88 35 L131 35 L153 45 L75 45 Z" fill="#0f172a" stroke="#94a3b8" stroke-width="1.4" />
+            <path d="M94 37 L110 37 L105 43 L87 43 Z" fill="#38bdf8" opacity="0.45" />
+            <rect x="58" y="50" width="104" height="3.5" rx="1.5" fill="#f8fafc" opacity="0.8" />
+            <polygon points="34,43 48,43 45,35 30,35" fill="${car.cssHex}" />
+            <circle cx="66" cy="70" r="14.5" fill="#090d16" stroke="#475569" stroke-width="2" />
+            <circle cx="66" cy="70" r="9.5" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.2" />
+            <circle cx="66" cy="70" r="4" fill="#e2e8f0" />
+            <circle cx="158" cy="70" r="14.5" fill="#090d16" stroke="#475569" stroke-width="2" />
+            <circle cx="158" cy="70" r="9.5" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.2" />
+            <circle cx="158" cy="70" r="4" fill="#e2e8f0" />
+            <ellipse cx="187" cy="56" rx="5" ry="3.2" fill="#fef9c3" />
+            <ellipse cx="34" cy="56" rx="4.5" ry="3" fill="#ff2a55" />
+          </svg>
+        `;
+      }
+
+      function renderLobbySlots() {
+        lobbyRoomTag.textContent = "ROOM #" + roomCode;
+        lobbyDot.className = isInRoom
+          ? "w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"
+          : "w-2.5 h-2.5 rounded-full bg-slate-500";
+
+        if (!isInRoom) {
+          lobbyCountLabel.textContent = "LEFT LOBBY · 0/5 PLAYERS";
+          lobbySlots.innerHTML = `
+            <div class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-slate-950/70 border border-slate-800 text-xs sm:text-sm text-slate-400">
+              <span>방에서 퇴장했습니다. 이름과 방 코드(숫자 4자리)를 입력하고 [방 입장/변경]을 누르세요.</span>
+            </div>
+          `;
+          return;
+        }
+
+        const peers = Array.from(remotePeers.values()).slice(0, 4);
+        const humanCount = 1 + peers.length;
+        lobbyCountLabel.textContent = "GRID LOBBY · " + humanCount + "/5 PLAYERS";
+        lobbySlots.innerHTML = "";
+
+        const meRow = document.createElement("div");
+        meRow.className = "flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-sky-950/45 border border-sky-400/50";
+        meRow.innerHTML = `
+          <div class="flex items-center gap-2 font-extrabold text-xs sm:text-sm text-white">
+            <span class="px-2 py-0.5 rounded bg-sky-500 text-[10px] font-black text-slate-950">YOU</span>
+            <span>${escapeHtml(myNickname)}</span>
+          </div>
+          <span class="text-xs font-bold text-sky-300">${escapeHtml(selectedCar.name)}</span>
+        `;
+        lobbySlots.appendChild(meRow);
+
+        peers.forEach((p) => {
+          const peerCar = CAR_ROSTER.find((c) => c.id === p.carId) || CAR_ROSTER[0];
+          const row = document.createElement("div");
+          row.className = "flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-950/65 border border-slate-800";
+          row.innerHTML = `
+            <div class="flex items-center gap-2 font-bold text-xs sm:text-sm text-slate-200">
+              <span class="px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 text-[10px] font-extrabold">ONLINE</span>
+              <span>${escapeHtml(p.name)}</span>
+            </div>
+            <span class="text-xs text-slate-400">${escapeHtml(peerCar.name)} · ${p.score.toLocaleString()}원</span>
+          `;
+          lobbySlots.appendChild(row);
+        });
+
+        const botCount = Math.max(0, 5 - humanCount);
+        for (let i = 0; i < botCount; i++) {
+          const bot = AI_BOTS[i % AI_BOTS.length];
+          const botCar = CAR_ROSTER.find((c) => c.id === bot.carId) || CAR_ROSTER[0];
+          const row = document.createElement("div");
+          row.className = "flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-950/45 border border-slate-800/70";
+          row.innerHTML = `
+            <div class="flex items-center gap-2 font-semibold text-xs sm:text-sm text-slate-300">
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-extrabold">AI GRID</span>
+              <span>${escapeHtml(bot.name)}</span>
+            </div>
+            <span class="text-xs text-slate-500">${escapeHtml(botCar.name)}</span>
+          `;
+          lobbySlots.appendChild(row);
+        }
+      }
+
+      function renderCarSelectCards() {
+        carGrid.innerHTML = "";
+        CAR_ROSTER.forEach((car) => {
+          const isSelected = selectedCar.id === car.id;
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "car-card text-left rounded-2xl p-4 flex flex-col justify-between gap-3 cursor-pointer " + (isSelected ? "selected" : "");
+          const speedPct = Math.round(((car.topSpeed - 175) / 40) * 100);
+          const handlingPct = Math.round(((car.handling - 0.85) / 0.4) * 100);
+          const boostPct = Math.round(((car.boostPower - 1.25) / 0.45) * 100);
+
+          card.innerHTML = `
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="text-[11px] font-bold px-2.5 py-0.5 rounded bg-slate-800 text-sky-300">${escapeHtml(car.tag)}</span>
+                <span class="w-4 h-4 rounded-full border border-white/40" style="background:${car.cssHex}"></span>
+              </div>
+              ${createCarIllustrationSvg(car)}
+              <div class="text-base font-black text-white mt-2.5">${escapeHtml(car.name)}</div>
+            </div>
+
+            <div class="space-y-1.5 text-[11px] font-bold text-slate-300">
+              <div>
+                <div class="flex justify-between mb-0.5"><span>최고 속도</span><span>${car.topSpeed} KM/H</span></div>
+                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div class="h-full bg-sky-400" style="width:${clamp(speedPct, 25, 100)}%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between mb-0.5"><span>조향 성능</span><span>${Math.round(car.handling * 100)}%</span></div>
+                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div class="h-full bg-emerald-400" style="width:${clamp(handlingPct, 25, 100)}%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between mb-0.5"><span>부스터 출력</span><span>${Math.round(car.boostPower * 100)}%</span></div>
+                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div class="h-full bg-amber-400" style="width:${clamp(boostPct, 25, 100)}%"></div>
+                </div>
+              </div>
+            </div>
+          `;
+
+          card.addEventListener("click", async () => {
+            await ensureAudioContext();
+            selectedCar = car;
+            selectedCarSummary.textContent = car.name;
+            renderCarSelectCards();
+            rebuildPlayerCarMesh();
+          });
+
+          carGrid.appendChild(card);
+        });
+        selectedCarSummary.textContent = selectedCar.name;
+      }
+
+      function switchScreen(targetScreen) {
+        lobbyScreen.classList.add("hidden");
+        lobbyScreen.classList.remove("flex");
+        carSelectScreen.classList.add("hidden");
+        carSelectScreen.classList.remove("flex");
+        raceScreen.classList.add("hidden");
+        raceScreen.classList.remove("flex");
+
+        if (targetScreen === "LOBBY") {
+          endOverlay.classList.add("hidden");
+          countdownOverlay.classList.add("hidden");
+          lobbyScreen.classList.remove("hidden");
+          lobbyScreen.classList.add("flex");
+        } else if (targetScreen === "CAR_SELECT") {
+          endOverlay.classList.add("hidden");
+          countdownOverlay.classList.add("hidden");
+          carSelectScreen.classList.remove("hidden");
+          carSelectScreen.classList.add("flex");
+        } else if (targetScreen === "RACE") {
+          endOverlay.classList.add("hidden");
+          raceScreen.classList.remove("hidden");
+          raceScreen.classList.add("flex");
+        }
+      }
+
+      function initThreeScene() {
+        if (renderer) return;
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0ea5e9);
+        scene.fog = new THREE.FogExp2(0x38bdf8, 0.0028);
+
+        const width = Math.max(320, viewportWrapper.clientWidth || 960);
+        const height = Math.max(240, viewportWrapper.clientHeight || 540);
+
+        camera = new THREE.PerspectiveCamera(65, width / height, 0.2, 320);
+        camera.position.set(0, 14.5, 4);
+
+        renderer = new THREE.WebGLRenderer({
+          canvas: threeCanvas,
+          antialias: true,
+          powerPreference: "high-performance"
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(width, height, false);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x1e293b, 0.95);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfffbeb, 1.35);
+        dirLight.position.set(18, 28, 16);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        buildCoastalTrack();
+        buildFinishRibbon();
+        rebuildPlayerCarMesh();
+        buildAiCars();
+        populateCollectiblesAndHazards();
+      }
+
+      function getCourseCenterX(zPos) {
+        if (!activeCourseTheme || zPos > -14) return 0;
+        const dist = Math.abs(zPos) - 14;
+        const phaseOffset = ((courseSeed % 720) / 720) * Math.PI * 2;
+        const sCurve = Math.sin(dist * activeCourseTheme.curveFreq + phaseOffset) * activeCourseTheme.curveAmp;
+        const winding = Math.sin(dist * (activeCourseTheme.curveFreq * 2.45) + phaseOffset * 1.3) * (activeCourseTheme.curveAmp * 0.48);
+        const chicane = Math.cos(dist * (activeCourseTheme.curveFreq * 4.1) - phaseOffset * 0.7) * (activeCourseTheme.curveAmp * 0.22);
+        return sCurve + winding + chicane;
+      }
+
+      function getCourseElevationY(zPos) {
+        if (!activeCourseTheme || zPos > -18) return 0;
+        const dist = Math.abs(zPos) - 18;
+        const hillPhase = (((courseSeed >> 4) % 720) / 720) * Math.PI * 2;
+        const mainHill = Math.sin(dist * activeCourseTheme.hillFreq + hillPhase) * activeCourseTheme.hillAmp;
+        const rollingCrest = Math.cos(dist * (activeCourseTheme.hillFreq * 2.2) + hillPhase * 0.8) * (activeCourseTheme.hillAmp * 0.35);
+        return mainHill + rollingCrest;
+      }
+
+      function buildCoastalTrack() {
+        if (!scene) return;
+        if (coursePropsGroup) {
+          scene.remove(coursePropsGroup);
+        }
+        coursePropsGroup = new THREE.Group();
+        scene.add(coursePropsGroup);
+
+        const themes = [
+          {
+            name: "코발트 해변 코스",
+            skyHex: 0x0ea5e9,
+            fogHex: 0x38bdf8,
+            oceanHex: 0x0284c7,
+            sandHex: 0xfde68a,
+            roadHex: 0x1e293b,
+            curveAmp: 9.5,
+            curveFreq: 0.0054,
+            hillAmp: 2.2,
+            hillFreq: 0.0055
+          },
+          {
+            name: "선셋 코랄 서킷",
+            skyHex: 0x3b1d4a,
+            fogHex: 0x6b2d5c,
+            oceanHex: 0x0e7490,
+            sandHex: 0xfbbf24,
+            roadHex: 0x27272a,
+            curveAmp: 11.2,
+            curveFreq: 0.0065,
+            hillAmp: 2.6,
+            hillFreq: 0.0065
+          },
+          {
+            name: "에메랄드 리프 하이웨이",
+            skyHex: 0x0f766e,
+            fogHex: 0x2dd4bf,
+            oceanHex: 0x0d9488,
+            sandHex: 0xfef08a,
+            roadHex: 0x1f2937,
+            curveAmp: 10.4,
+            curveFreq: 0.0059,
+            hillAmp: 2.4,
+            hillFreq: 0.006
+          }
+        ];
+        activeCourseTheme = themes[Math.abs(courseSeed) % themes.length];
+        scene.background = new THREE.Color(activeCourseTheme.skyHex);
+        scene.fog = new THREE.FogExp2(activeCourseTheme.fogHex, 0.0028);
+
+        const oceanGeo = new THREE.PlaneGeometry(540, TRACK_LENGTH + 650);
+        const oceanMat = new THREE.MeshBasicMaterial({
+          color: activeCourseTheme.oceanHex,
+          side: THREE.DoubleSide
+        });
+        const oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
+        oceanMesh.rotation.x = -Math.PI / 2;
+        oceanMesh.position.set(0, -3.2, -(TRACK_LENGTH / 2) + 80);
+        oceanMesh.frustumCulled = false;
+        coursePropsGroup.add(oceanMesh);
+
+        roadSegments = [];
+        const segLen = 4.5;
+        const sandSegGeo = new THREE.BoxGeometry(110, 0.35, segLen + 2.6);
+        const sandSegMat = new THREE.MeshBasicMaterial({ color: activeCourseTheme.sandHex, side: THREE.DoubleSide });
+        const roadSegGeo = new THREE.BoxGeometry(ROAD_HALF_WIDTH * 2 + 2.2, 0.42, segLen + 2.6);
+        const roadSegMat = new THREE.MeshBasicMaterial({ color: activeCourseTheme.roadHex, side: THREE.DoubleSide });
+        const laneDashGeo = new THREE.BoxGeometry(0.34, 0.1, 2.5);
+        const laneDashMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+        const kerbGeo = new THREE.BoxGeometry(0.66, 0.32, segLen + 2.2);
+
+        for (let z = 52; z > -TRACK_LENGTH - 50; z -= segLen) {
+          const nextZ = z - segLen;
+          const cx = getCourseCenterX(z);
+          const nextCx = getCourseCenterX(nextZ);
+          const cy = getCourseElevationY(z);
+          const nextCy = getCourseElevationY(nextZ);
+
+          const midX = (cx + nextCx) * 0.5;
+          const midY = (cy + nextCy) * 0.5;
+          const midZ = (z + nextZ) * 0.5;
+          const yaw = Math.atan2(nextCx - cx, nextZ - z);
+          const horizDist = Math.hypot(nextCx - cx, nextZ - z) || segLen;
+          const pitch = -Math.atan2(nextCy - cy, horizDist);
+
+          const sandSeg = new THREE.Mesh(sandSegGeo, sandSegMat);
+          sandSeg.position.set(midX, midY - 0.18, midZ);
+          sandSeg.rotation.order = "YXZ";
+          sandSeg.rotation.y = yaw;
+          sandSeg.rotation.x = pitch;
+          sandSeg.frustumCulled = false;
+          coursePropsGroup.add(sandSeg);
+
+          const roadSeg = new THREE.Mesh(roadSegGeo, roadSegMat);
+          roadSeg.position.set(midX, midY + 0.06, midZ);
+          roadSeg.rotation.order = "YXZ";
+          roadSeg.rotation.y = yaw;
+          roadSeg.rotation.x = pitch;
+          roadSeg.frustumCulled = false;
+          coursePropsGroup.add(roadSeg);
+          roadSegments.push(roadSeg);
+
+          if (z <= 28 && z > -TRACK_LENGTH) {
+            [-3.8, 3.8].forEach((lx) => {
+              const dash = new THREE.Mesh(laneDashGeo, laneDashMat);
+              dash.position.set(midX + Math.cos(yaw) * lx, midY + 0.28, midZ - Math.sin(yaw) * lx);
+              dash.rotation.order = "YXZ";
+              dash.rotation.y = yaw;
+              dash.rotation.x = pitch;
+              dash.frustumCulled = false;
+              coursePropsGroup.add(dash);
+            });
+
+            const kerbMat = new THREE.MeshBasicMaterial({
+              color: Math.abs(Math.round(z / segLen)) % 2 === 0 ? 0xef4444 : 0xf8fafc
+            });
+
+            const leftKerb = new THREE.Mesh(kerbGeo, kerbMat);
+            leftKerb.position.set(
+              midX - Math.cos(yaw) * (ROAD_HALF_WIDTH + 0.15),
+              midY + 0.28,
+              midZ + Math.sin(yaw) * (ROAD_HALF_WIDTH + 0.15)
+            );
+            leftKerb.rotation.order = "YXZ";
+            leftKerb.rotation.y = yaw;
+            leftKerb.rotation.x = pitch;
+            leftKerb.frustumCulled = false;
+            coursePropsGroup.add(leftKerb);
+
+            const rightKerb = new THREE.Mesh(kerbGeo, kerbMat);
+            rightKerb.position.set(
+              midX + Math.cos(yaw) * (ROAD_HALF_WIDTH + 0.15),
+              midY + 0.28,
+              midZ - Math.sin(yaw) * (ROAD_HALF_WIDTH + 0.15)
+            );
+            rightKerb.rotation.order = "YXZ";
+            rightKerb.rotation.y = yaw;
+            rightKerb.rotation.x = pitch;
+            rightKerb.frustumCulled = false;
+            coursePropsGroup.add(rightKerb);
+
+            if (Math.abs(Math.round(z)) % 22 === 0) {
+              addPalmTree(cx - ROAD_HALF_WIDTH - 6.2, cy, z);
+              addPalmTree(cx + ROAD_HALF_WIDTH + 6.2, nextCy, nextZ);
+              addBeachUmbrella(cx - ROAD_HALF_WIDTH - 11.5, cy, z - 8, 0xf97316);
+              addBeachUmbrella(cx + ROAD_HALF_WIDTH + 11.5, nextCy, nextZ - 8, 0x38bdf8);
+            }
+          }
+        }
+
+        const startLineMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(ROAD_HALF_WIDTH * 2, 0.16, 1.8),
+          new THREE.MeshBasicMaterial({ color: 0xf8fafc })
+        );
+        startLineMesh.position.set(getCourseCenterX(-4), getCourseElevationY(-4) + 0.28, -4);
+        startLineMesh.frustumCulled = false;
+        coursePropsGroup.add(startLineMesh);
+
+        addCoastalLighthouse(getCourseCenterX(-28) - ROAD_HALF_WIDTH - 15, getCourseElevationY(-28), -28);
+        addCoastalLighthouse(getCourseCenterX(-1800) + ROAD_HALF_WIDTH + 16, getCourseElevationY(-1800), -1800);
+        for (let bz = -20; bz > -TRACK_LENGTH; bz -= 95) {
+          const bCenterX = getCourseCenterX(bz);
+          addCoastalBuoy(bCenterX + ROAD_HALF_WIDTH + 16, bz);
+          addCoastalBuoy(bCenterX - ROAD_HALF_WIDTH - 18, bz - 40);
+        }
+      }
+
+      function addBeachUmbrella(xPos, yPos, zPos, canopyHex = 0xf97316) {
+        const umbGroup = new THREE.Group();
+        const pole = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.08, 0.08, 2.7, 8),
+          new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 })
+        );
+        pole.position.y = 1.35;
+        umbGroup.add(pole);
+
+        const canopy = new THREE.Mesh(
+          new THREE.ConeGeometry(1.85, 1.05, 12),
+          new THREE.MeshStandardMaterial({ color: canopyHex, roughness: 0.5 })
+        );
+        canopy.position.y = 2.65;
+        umbGroup.add(canopy);
+
+        umbGroup.position.set(xPos, yPos, zPos);
+        umbGroup.frustumCulled = false;
+        coursePropsGroup.add(umbGroup);
+      }
+
+      function addCoastalLighthouse(xPos, yPos, zPos) {
+        const towerGroup = new THREE.Group();
+        const baseMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.3, 1.9, 9.5, 14),
+          new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 })
+        );
+        baseMesh.position.y = 4.75;
+        towerGroup.add(baseMesh);
+
+        const stripeMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.52, 1.72, 2.2, 14),
+          new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.45 })
+        );
+        stripeMesh.position.y = 5.4;
+        towerGroup.add(stripeMesh);
+
+        const lanternMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.15, 1.15, 1.6, 12),
+          new THREE.MeshBasicMaterial({ color: 0xfef08a })
+        );
+        lanternMesh.position.y = 10.2;
+        towerGroup.add(lanternMesh);
+
+        const domeMesh = new THREE.Mesh(
+          new THREE.ConeGeometry(1.45, 1.8, 14),
+          new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4 })
+        );
+        domeMesh.position.y = 11.8;
+        towerGroup.add(domeMesh);
+
+        towerGroup.position.set(xPos, yPos, zPos);
+        coursePropsGroup.add(towerGroup);
+      }
+
+      function addCoastalBuoy(xPos, zPos) {
+        const buoyGroup = new THREE.Group();
+        const floatMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.15, 1.35, 1.1, 12),
+          new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.4 })
+        );
+        floatMesh.position.y = 0.2;
+        buoyGroup.add(floatMesh);
+
+        const capMesh = new THREE.Mesh(
+          new THREE.ConeGeometry(0.95, 1.4, 12),
+          new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.4 })
+        );
+        capMesh.position.y = 1.3;
+        buoyGroup.add(capMesh);
+
+        buoyGroup.position.set(xPos, -2.5, zPos);
+        coursePropsGroup.add(buoyGroup);
+      }
+
+      function addPalmTree(xPos, yPos, zPos) {
+        const tree = new THREE.Group();
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.22, 0.36, 4.4, 7),
+          new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 })
+        );
+        trunk.position.y = 2.1;
+        trunk.castShadow = true;
+        tree.add(trunk);
+
+        const frondGeo = new THREE.ConeGeometry(1.4, 0.45, 5);
+        const frondMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.75 });
+        for (let i = 0; i < 5; i++) {
+          const angle = (i / 5) * Math.PI * 2;
+          const frond = new THREE.Mesh(frondGeo, frondMat);
+          frond.position.set(Math.cos(angle) * 0.8, 4.3, Math.sin(angle) * 0.8);
+          frond.rotation.z = -Math.cos(angle) * 0.55;
+          frond.rotation.x = Math.sin(angle) * 0.55;
+          tree.add(frond);
+        }
+
+        tree.position.set(xPos, yPos, zPos);
+        coursePropsGroup.add(tree);
+      }
+
+      function buildFinishRibbon() {
+        if (finishRibbonGroup) {
+          scene.remove(finishRibbonGroup);
+        }
+        finishRibbonGroup = new THREE.Group();
+        const finishZ = -TRACK_LENGTH;
+        const finishCenterX = getCourseCenterX(finishZ);
+        const finishY = getCourseElevationY(finishZ);
+
+        const poleGeo = new THREE.CylinderGeometry(0.32, 0.32, 6.2, 12);
+        const poleMat = new THREE.MeshStandardMaterial({
+          color: 0xe2e8f0,
+          metalness: 0.7,
+          roughness: 0.25
+        });
+
+        const leftPole = new THREE.Mesh(poleGeo, poleMat);
+        leftPole.position.set(finishCenterX - ROAD_HALF_WIDTH - 0.6, finishY + 3.0, finishZ);
+        finishRibbonGroup.add(leftPole);
+
+        const rightPole = new THREE.Mesh(poleGeo, poleMat);
+        rightPole.position.set(finishCenterX + ROAD_HALF_WIDTH + 0.6, finishY + 3.0, finishZ);
+        finishRibbonGroup.add(rightPole);
+
+        const banner = new THREE.Mesh(
+          new THREE.BoxGeometry(ROAD_HALF_WIDTH * 2 + 1.8, 1.0, 0.45),
+          new THREE.MeshStandardMaterial({
+            color: 0x0f172a,
+            emissive: 0x1d4ed8,
+            emissiveIntensity: 0.45
+          })
+        );
+        banner.position.set(finishCenterX, finishY + 5.6, finishZ);
+        finishRibbonGroup.add(banner);
+
+        const ribbonMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(ROAD_HALF_WIDTH * 2 + 0.6, 0.28, 0.14),
+          new THREE.MeshStandardMaterial({
+            color: 0xf43f5e,
+            emissive: 0xe11d48,
+            emissiveIntensity: 0.55,
+            roughness: 0.3
+          })
+        );
+        ribbonMesh.name = "finishRibbonTape";
+        ribbonMesh.position.set(finishCenterX, finishY + 1.35, finishZ);
+        finishRibbonGroup.add(ribbonMesh);
+
+        const stripe = new THREE.Mesh(
+          new THREE.BoxGeometry(ROAD_HALF_WIDTH * 2, 0.06, 1.6),
+          new THREE.MeshBasicMaterial({ color: 0xfafafa })
+        );
+        stripe.position.set(finishCenterX, finishY + 0.15, finishZ);
+        finishRibbonGroup.add(stripe);
+
+        scene.add(finishRibbonGroup);
+      }
+
+      function createCarMesh(carSpec, includeFlame = false) {
+        const group = new THREE.Group();
+        const wheels = [];
+
+        const bodyMat = new THREE.MeshStandardMaterial({
+          color: carSpec.bodyColor,
+          metalness: 0.72,
+          roughness: 0.2
+        });
+        const cabinMat = new THREE.MeshStandardMaterial({
+          color: 0x0b1320,
+          metalness: 0.9,
+          roughness: 0.12
+        });
+        const trimMat = new THREE.MeshStandardMaterial({
+          color: carSpec.accentColor,
+          metalness: 0.45,
+          roughness: 0.32
+        });
+        const bumperMat = new THREE.MeshStandardMaterial({
+          color: 0x1e293b,
+          metalness: 0.5,
+          roughness: 0.45
+        });
+
+        const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.04, 0.52, 4.38), bodyMat);
+        chassis.position.y = 0.62;
+        chassis.castShadow = true;
+        group.add(chassis);
+
+        const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(2.08, 0.34, 0.48), bumperMat);
+        frontBumper.position.set(0, 0.48, -2.12);
+        group.add(frontBumper);
+
+        const rearBumper = new THREE.Mesh(new THREE.BoxGeometry(2.08, 0.36, 0.52), bumperMat);
+        rearBumper.position.set(0, 0.52, 2.12);
+        group.add(rearBumper);
+
+        const hood = new THREE.Mesh(new THREE.BoxGeometry(1.78, 0.18, 1.45), bodyMat);
+        hood.position.set(0, 0.92, -1.25);
+        hood.rotation.x = 0.07;
+        group.add(hood);
+
+        const cabin = new THREE.Mesh(
+          new THREE.BoxGeometry(carSpec.id === "cobalt_f1" ? 1.38 : 1.66, 0.54, 1.92),
+          cabinMat
+        );
+        cabin.position.set(0, 1.18, 0.02);
+        group.add(cabin);
+
+        const roofPanel = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.08, 1.05), bodyMat);
+        roofPanel.position.set(0, 1.45, 0.05);
+        group.add(roofPanel);
+
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(2.14, 0.12, 0.52), trimMat);
+        wing.position.set(0, 1.32, 1.88);
+        group.add(wing);
+
+        const headMat = new THREE.MeshBasicMaterial({ color: 0xfef9c3 });
+        [-0.74, 0.74].forEach((hx) => {
+          const light = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.15, 0.1), headMat);
+          light.position.set(hx, 0.72, -2.21);
+          group.add(light);
+        });
+
+        const tailMat = new THREE.MeshBasicMaterial({ color: 0xff1744 });
+        [-0.72, 0.72].forEach((tx) => {
+          const tail = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.15, 0.1), tailMat);
+          tail.position.set(tx, 0.76, 2.21);
+          group.add(tail);
+        });
+
+        const wheelGeo = new THREE.CylinderGeometry(0.46, 0.46, 0.4, 16);
+        wheelGeo.rotateZ(Math.PI / 2);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.85 });
+        const rimGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.42, 10);
+        rimGeo.rotateZ(Math.PI / 2);
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.85, roughness: 0.2 });
+
+        [
+          [-1.14, 0.46, -1.36],
+          [1.14, 0.46, -1.36],
+          [-1.14, 0.46, 1.36],
+          [1.14, 0.46, 1.36]
+        ].forEach(([wx, wy, wz]) => {
+          const w = new THREE.Mesh(wheelGeo, wheelMat);
+          w.position.set(wx, wy, wz);
+          const rim = new THREE.Mesh(rimGeo, rimMat);
+          w.add(rim);
+          group.add(w);
+          wheels.push(w);
+        });
+
+        let flame = null;
+        if (includeFlame) {
+          const flameGeo = new THREE.ConeGeometry(0.36, 1.65, 10);
+          flameGeo.rotateX(Math.PI / 2);
+          const flameMat = new THREE.MeshBasicMaterial({
+            color: 0x38bdf8,
+            transparent: true,
+            opacity: 0.9
+          });
+          flame = new THREE.Mesh(flameGeo, flameMat);
+          flame.position.set(0, 0.72, 2.95);
+          flame.visible = false;
+          group.add(flame);
+        }
+
+        return { group, wheels, flame };
+      }
+
+      function rebuildPlayerCarMesh() {
+        if (!scene) return;
+        if (playerCarGroup) {
+          scene.remove(playerCarGroup);
+        }
+        const built = createCarMesh(selectedCar, true);
+        playerCarGroup = built.group;
+        playerWheels = built.wheels;
+        boostFlameMesh = built.flame;
+        playerCarGroup.position.set(carState.x, getCourseElevationY(carState.z) + 0.14, carState.z);
+        scene.add(playerCarGroup);
+      }
+
+      function buildAiCars() {
+        if (!scene) return;
+        aiEntities.forEach((item) => scene.remove(item.group));
+        aiEntities = [];
+
+        AI_BOTS.forEach((bot) => {
+          const spec = CAR_ROSTER.find((c) => c.id === bot.carId) || CAR_ROSTER[0];
+          const built = createCarMesh(spec, false);
+          built.group.position.set(bot.laneOffset, 0.14, -4);
+          scene.add(built.group);
+
+          aiEntities.push({
+            ...bot,
+            spec,
+            group: built.group,
+            wheels: built.wheels,
+            x: bot.laneOffset,
+            z: -4,
+            speed: spec.topSpeed * 0.42 * bot.pace,
+            score: 0,
+            laneTimer: 1.0,
+            targetX: bot.laneOffset
+          });
         });
       }
 
-      document.getElementById("resultBox").style.display = "none";
-    }
+      function populateCollectiblesAndHazards() {
+        if (!scene) return;
+        coinEntities.forEach((c) => scene.remove(c.mesh));
+        hazardEntities.forEach((h) => scene.remove(h.mesh));
+        boosterPadEntities.forEach((b) => scene.remove(b.mesh));
+        coinEntities = [];
+        hazardEntities = [];
+        boosterPadEntities = [];
 
-    function createCoin(randomY = false) {
-      const roadLeft = 140;
-      const roadRight = canvas.width - 140;
-      const isGold = Math.random() < 0.25;
-      return {
-        x: roadLeft + Math.random() * (roadRight - roadLeft),
-        y: randomY ? Math.random() * (canvas.height - 120) : -20,
-        r: isGold ? 13 : 10,
-        value: isGold ? 300 : 100,
-        speed: isGold ? 190 : 150,
-        gold: isGold
-      };
-    }
+        let seedVal = courseSeed || 1;
+        const seededRandom = () => {
+          seedVal = (seedVal * 1664525 + 1013904223) % 4294967296;
+          return seedVal / 4294967296;
+        };
 
-    function startRaceLocal(broadcastStart = true) {
-      setupRaceEntities();
-      gameRunning = true;
-      lobbyView.style.display = "none";
-      raceView.style.display = "flex";
-      lastFrameTime = performance.now();
-      if (broadcastStart) {
-        sendPacket("START_RACE", { score: 0, progress: 0, x: player.x });
-      }
-      requestAnimationFrame(gameLoop);
-    }
+        const coinGeo = new THREE.CylinderGeometry(0.62, 0.62, 0.2, 20);
+        coinGeo.rotateZ(Math.PI / 2);
+        const stepCoin = 32 + Math.floor(seededRandom() * 12);
 
-    function finishRace() {
-      gameRunning = false;
-      saveScore(player.score);
-      sendPacket("FINISH_RACE", { score: player.score, progress: player.progress, x: player.x });
+        for (let z = -35; z > -TRACK_LENGTH + 60; z -= stepCoin) {
+          const isBig = seededRandom() < 0.3;
+          const centerX = getCourseCenterX(z);
+          const groundY = getCourseElevationY(z);
+          const x = centerX + (seededRandom() * 2 - 1) * (ROAD_HALF_WIDTH - 1.6);
+          const mat = new THREE.MeshStandardMaterial({
+            color: isBig ? 0xfef08a : 0xd97706,
+            emissive: isBig ? 0xf59e0b : 0x78350f,
+            emissiveIntensity: isBig ? 0.65 : 0.3,
+            metalness: 0.78,
+            roughness: 0.2
+          });
+          const mesh = new THREE.Mesh(coinGeo, mat);
+          mesh.scale.set(isBig ? 1.82 : 0.85, isBig ? 1.82 : 0.85, isBig ? 1.55 : 0.9);
+          mesh.position.set(x, groundY + (isBig ? 1.45 : 0.92), z);
+          scene.add(mesh);
 
-      const allScores = [
-        { name: myNickname, score: player.score, isMe: true },
-        ...Array.from(remotePlayers.values()).map((p) => ({ name: p.name, score: p.score, isMe: false })),
-        ...aiRacers.map((a) => ({ name: a.name, score: a.score, isMe: false }))
-      ].sort((a, b) => b.score - a.score);
-
-      const rank = allScores.findIndex((item) => item.isMe) + 1;
-      document.getElementById("resultTitle").textContent = "🏁 레이스 완주! (" + rank + "위)";
-      document.getElementById("resultDetail").textContent =
-        "획득 점수: " + player.score.toLocaleString() + "원 · 최고 기록: " + bestScore.toLocaleString() + "원";
-      document.getElementById("resultBox").style.display = "block";
-    }
-
-    function gameLoop(now) {
-      if (!gameRunning) return;
-      const dt = Math.min(0.05, (now - lastFrameTime) / 1000);
-      lastFrameTime = now;
-
-      raceTimer -= dt;
-      if (raceTimer <= 0) {
-        raceTimer = 0;
-        updateHud(1);
-        renderRace();
-        finishRace();
-        return;
-      }
-
-      const boostActive = keys.boost && player.boost > 5;
-      if (boostActive) {
-        player.boost = Math.max(0, player.boost - 38 * dt);
-      } else {
-        player.boost = Math.min(100, player.boost + 20 * dt);
-      }
-
-      const moveSpeed = (boostActive ? 390 : 280);
-      player.vx = 0;
-      if (keys.left) player.vx -= moveSpeed;
-      if (keys.right) player.vx += moveSpeed;
-
-      player.x += player.vx * dt;
-      const roadLeft = 135;
-      const roadRight = canvas.width - 135;
-      player.x = Math.max(roadLeft, Math.min(roadRight, player.x));
-      player.progress += (boostActive ? 145 : 95) * dt;
-
-      // Coins
-      const speedMult = boostActive ? 1.45 : 1.0;
-      for (let i = 0; i < coins.length; i++) {
-        const c = coins[i];
-        c.y += c.speed * speedMult * dt;
-
-        const dx = c.x - player.x;
-        const dy = c.y - player.y;
-        if (Math.hypot(dx, dy) < c.r + 24) {
-          player.score += c.value;
-          coins[i] = createCoin(false);
-          continue;
+          coinEntities.push({
+            mesh,
+            x,
+            z,
+            value: isBig ? 500 : 100,
+            isBig,
+            collected: false
+          });
         }
 
-        if (c.y > canvas.height + 25) {
-          coins[i] = createCoin(false);
-        }
-      }
-
-      // AI racers
-      for (const ai of aiRacers) {
-        ai.dirTimer -= dt;
-        if (ai.dirTimer <= 0) {
-          ai.dirTimer = 0.6 + Math.random() * 0.9;
-          ai.targetX = roadLeft + 20 + Math.random() * (roadRight - roadLeft - 40);
-        }
-        const diff = ai.targetX - ai.x;
-        ai.x += Math.sign(diff) * Math.min(Math.abs(diff), 165 * dt);
-        ai.progress += (82 + Math.random() * 25) * dt;
-        if (Math.random() < 0.03) ai.score += 100;
-      }
-
-      // Compute rank
-      const standings = [
-        { id: "me", score: player.score, progress: player.progress },
-        ...Array.from(remotePlayers.values()).map((p) => ({ id: p.clientId, score: p.score, progress: p.progress })),
-        ...aiRacers.map((a, idx) => ({ id: "ai_" + idx, score: a.score, progress: a.progress }))
-      ].sort((a, b) => (b.score - a.score) || (b.progress - a.progress));
-
-      const myRank = standings.findIndex((s) => s.id === "me") + 1;
-
-      if (now - lastBroadcastTime > 180) {
-        lastBroadcastTime = now;
-        sendPacket("STATE", {
-          score: player.score,
-          progress: player.progress,
-          x: player.x
+        const padGeo = new THREE.BoxGeometry(2.3, 0.16, 3.1);
+        const padMat = new THREE.MeshStandardMaterial({
+          color: 0x00e5ff,
+          emissive: 0x0284c7,
+          emissiveIntensity: 0.75,
+          metalness: 0.5,
+          roughness: 0.22
         });
+        const chevronGeo = new THREE.ConeGeometry(0.55, 1.05, 3);
+        chevronGeo.rotateX(-Math.PI / 2);
+        const chevronMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+        const stepBooster = 95 + Math.floor(seededRandom() * 35);
+        for (let z = -65; z > -TRACK_LENGTH + 70; z -= stepBooster) {
+          const centerX = getCourseCenterX(z);
+          const groundY = getCourseElevationY(z);
+          const x = centerX + (seededRandom() * 2 - 1) * (ROAD_HALF_WIDTH - 2.6);
+          const padGroup = new THREE.Group();
+          const basePad = new THREE.Mesh(padGeo, padMat);
+          basePad.position.y = 0.22;
+          padGroup.add(basePad);
+
+          const arrow = new THREE.Mesh(chevronGeo, chevronMat);
+          arrow.position.set(0, 0.36, 0);
+          padGroup.add(arrow);
+
+          padGroup.position.set(x, groundY, z);
+          scene.add(padGroup);
+
+          boosterPadEntities.push({
+            mesh: padGroup,
+            x,
+            z,
+            collected: false
+          });
+        }
+
+        const kinds = ["banana", "nail", "rock"];
+        const stepHazard = 54 + Math.floor(seededRandom() * 24);
+        for (let z = -65; z > -TRACK_LENGTH + 80; z -= stepHazard) {
+          const kind = kinds[Math.floor(seededRandom() * kinds.length)];
+          const centerX = getCourseCenterX(z);
+          const groundY = getCourseElevationY(z);
+          const x = centerX + (seededRandom() * 2 - 1) * (ROAD_HALF_WIDTH - 1.7);
+          let mesh;
+          let yOffset = 0.6;
+
+          if (kind === "banana") {
+            const g = new THREE.TorusGeometry(0.55, 0.2, 8, 14, Math.PI * 0.9);
+            const m = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.45 });
+            mesh = new THREE.Mesh(g, m);
+            yOffset = 0.45;
+          } else if (kind === "nail") {
+            const g = new THREE.ConeGeometry(0.45, 1.15, 6);
+            const m = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.85, roughness: 0.2 });
+            mesh = new THREE.Mesh(g, m);
+            yOffset = 0.62;
+          } else {
+            const g = new THREE.DodecahedronGeometry(0.82, 0);
+            const m = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 });
+            mesh = new THREE.Mesh(g, m);
+            yOffset = 0.72;
+          }
+
+          mesh.position.set(x, groundY + yOffset, z);
+          scene.add(mesh);
+
+          hazardEntities.push({
+            mesh,
+            kind,
+            x,
+            z,
+            damage: kind === "rock" ? 28 : (kind === "nail" ? 20 : 14),
+            hit: false
+          });
+        }
       }
 
-      updateHud(myRank);
-      renderRace();
-      requestAnimationFrame(gameLoop);
-    }
+      function resetRaceStateForGrid() {
+        courseSeed = Math.floor(Math.random() * 1000000);
+        raceElapsed = 0;
+        timeLeft = RACE_DURATION_SEC;
+        if (telemetryPanel) telemetryPanel.classList.remove("hidden");
+        endOverlay.classList.add("hidden");
+        countdownOverlay.classList.remove("hidden");
 
-    function updateHud(rank) {
-      document.getElementById("hudTime").textContent = "⏱️ 남은 시간: " + Math.ceil(raceTimer) + "초";
-      document.getElementById("hudScore").textContent = "🪙 내 점수: " + player.score.toLocaleString() + "원";
-      document.getElementById("hudRank").textContent = "🏁 순위: " + rank + "위";
-    }
+        initThreeScene();
+        buildCoastalTrack();
+        rebuildPlayerCarMesh();
+        buildAiCars();
+        populateCollectiblesAndHazards();
+        buildFinishRibbon();
 
-    function renderRace() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const gridLineZ = -4;
+        const startCenterX = getCourseCenterX(gridLineZ);
+        const gridLineY = getCourseElevationY(gridLineZ);
+        const laneOffsets = [-5.4, -2.7, 0, 2.7, 5.4];
 
-      // Sea & sand
-      ctx.fillStyle = "#4fc3f7";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#ffe082";
-      ctx.fillRect(0, 0, 115, canvas.height);
-      ctx.fillRect(canvas.width - 115, 0, 115, canvas.height);
+        carState.x = startCenterX + laneOffsets[2];
+        carState.vx = 0;
+        carState.z = gridLineZ;
+        carState.speed = 0;
+        carState.score = 0;
+        carState.hp = 100;
+        carState.boost = 100;
+        carState.spinTimer = 0;
+        carState.slowTimer = 0;
+        carState.padBoostTimer = 0;
+        carState.cameraYawOffset = 0;
+        carState.cameraPitchOffset = 0;
+        carState.shake = 0;
 
-      // Road
-      ctx.fillStyle = "#37474f";
-      ctx.fillRect(115, 0, canvas.width - 230, canvas.height);
+        const aiOffsets = [laneOffsets[0], laneOffsets[1], laneOffsets[3], laneOffsets[4]];
+        aiEntities.forEach((ai, idx) => {
+          const startX = startCenterX + (aiOffsets[idx] ?? 0);
+          ai.x = startX;
+          ai.targetX = startX;
+          ai.z = gridLineZ;
+          ai.speed = ai.spec.topSpeed * 0.42 * ai.pace;
+          ai.score = 0;
+          ai.group.position.set(ai.x, gridLineY + 0.14, ai.z);
+          ai.group.rotation.set(0, 0, 0);
+        });
 
-      // Road edges
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(122, 0, 6, canvas.height);
-      ctx.fillRect(canvas.width - 128, 0, 6, canvas.height);
+        playerCarGroup.position.set(carState.x, gridLineY + 0.14, carState.z);
+        playerCarGroup.rotation.set(0, 0, 0);
+        smoothCamLookX = carState.x;
+        smoothCamLookY = getCourseElevationY(carState.z - 12) + 0.4;
+        smoothCamLookZ = carState.z - 12;
+        smoothCamHeight = gridLineY + 14.5;
 
-      // Animated center dashed line
-      ctx.strokeStyle = "#ffd54f";
-      ctx.lineWidth = 4;
-      ctx.setLineDash([24, 24]);
-      ctx.lineDashOffset = -(player.progress % 48);
-      ctx.beginPath();
-      ctx.moveTo(canvas.width / 2, 0);
-      ctx.lineTo(canvas.width / 2, canvas.height);
-      ctx.stroke();
-      ctx.setLineDash([]);
+        countdownValue = 3;
+        countdownTimer = 1.0;
+        countdownNumber.textContent = "3";
+        phase = "COUNTDOWN";
 
-      // Coins
-      for (const c of coins) {
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-        ctx.fillStyle = c.gold ? "#ffca28" : "#ffb300";
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#fff8e1";
-        ctx.stroke();
+        updateHudTelemetry(1);
+        renderThreeFrame(performance.now());
+        playCountdownSfx(false);
       }
 
-      // AI cars
-      for (const ai of aiRacers) {
-        drawCar(ai.x, ai.y, ai.color, ai.name);
+      function beginRaceLoop() {
+        switchScreen("RACE");
+        resizeThreeViewport();
+        resetRaceStateForGrid();
+        lastFrameMs = performance.now();
+        if (animLoopRequestId) cancelAnimationFrame(animLoopRequestId);
+        animLoopRequestId = requestAnimationFrame(stepRaceLoop);
       }
 
-      // Remote peer markers on top
-      const peers = Array.from(remotePlayers.values());
-      peers.forEach((p, i) => {
-        const px = 160 + ((i * 130) % (canvas.width - 320));
-        const py = 56 + (i % 2) * 26;
-        drawCar(px, py, "#1e88e5", p.name + " (" + p.score + "원)");
+      function triggerRaceEnd(reason) {
+        if (phase === "ENDED") return;
+        phase = "ENDED";
+        if (animLoopRequestId) {
+          cancelAnimationFrame(animLoopRequestId);
+          animLoopRequestId = 0;
+        }
+        if (telemetryPanel) telemetryPanel.classList.add("hidden");
+        inputState.left = false;
+        inputState.right = false;
+        inputState.boost = false;
+        ctrlBoostBtn.classList.remove("is-active");
+
+        recordRunScore(carState.score);
+        sendSyncMessage("FINISH", { score: carState.score, z: carState.z, hp: carState.hp });
+
+        const standings = computeStandings();
+        const myRank = standings.findIndex((s) => s.isMe) + 1;
+        const elapsedSec = Math.max(1, Math.round(raceElapsed));
+        const eMins = Math.floor(elapsedSec / 60);
+        const eSecs = elapsedSec % 60;
+        const formattedElapsed = String(eMins).padStart(2, "0") + ":" + String(eSecs).padStart(2, "0");
+
+        endDriverId.textContent = myNickname;
+        endElapsedTime.textContent = formattedElapsed + " (" + elapsedSec + "초)";
+        endFinalScore.textContent = carState.score.toLocaleString() + "원";
+
+        if (reason === "DESTROYED") {
+          endBadge.textContent = "VEHICLE DESTROYED";
+          endBadge.className = "inline-block px-3 py-1 rounded-full text-xs font-extrabold bg-rose-500/20 text-rose-300 mb-2";
+          endTitle.textContent = "💥 차량 데미지 소진! 게임 종료";
+          endSubtitle.textContent =
+            "아이디 " + myNickname + " · 주행 시간 " + formattedElapsed + " · 최종 점수 " + carState.score.toLocaleString() + "원";
+        } else if (reason === "FINISH_LINE") {
+          endBadge.textContent = "CONGRATULATIONS!";
+          endBadge.className = "inline-block px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 mb-2";
+          endTitle.textContent = "Congratulations!";
+          endSubtitle.textContent =
+            myRank + "위 완주 · 아이디 " + myNickname + " · 완주 시간 " + formattedElapsed + " · 최종 점수 " + carState.score.toLocaleString() + "원";
+        } else {
+          endBadge.textContent = "TIME UP (2:00)";
+          endBadge.className = "inline-block px-3 py-1 rounded-full text-xs font-extrabold bg-amber-400/20 text-amber-300 mb-2";
+          endTitle.textContent = "⏱️ 제한 시간 종료! (" + myRank + "위)";
+          endSubtitle.textContent =
+            "아이디 " + myNickname + " · 기록 시간 " + formattedElapsed + " · 최종 점수 " + carState.score.toLocaleString() + "원";
+        }
+
+        endStandings.innerHTML = standings
+          .map(
+            (row, idx) => `
+            <div class="flex items-center justify-between py-1 px-2 rounded-lg ${row.isMe ? "bg-sky-500/20 text-white font-extrabold" : "text-slate-300"}">
+              <span>${idx + 1}위 · ${escapeHtml(row.name)}</span>
+              <span class="text-amber-300">${row.score.toLocaleString()}원</span>
+            </div>
+          `
+          )
+          .join("");
+
+        const isMultiPlayerRoom = remotePeers.size > 0;
+        if (reason === "DESTROYED" && isMultiPlayerRoom) {
+          raceAgainBtn.classList.add("hidden");
+          endSubtitle.textContent += " · 멀티플레이 방에서 데미지 소진 시 대기실로만 이동할 수 있습니다.";
+        } else {
+          raceAgainBtn.classList.remove("hidden");
+        }
+
+        endOverlay.classList.remove("hidden");
+      }
+
+      function computeStandings() {
+        const list = [
+          { name: myNickname + " (YOU)", z: carState.z, score: carState.score, isMe: true },
+          ...aiEntities.map((ai) => ({
+            name: ai.name,
+            z: ai.z,
+            score: ai.score,
+            isMe: false
+          })),
+          ...Array.from(remotePeers.values()).map((p) => ({
+            name: p.name + " (PEER)",
+            z: p.z,
+            score: p.score,
+            isMe: false
+          }))
+        ];
+        return list.sort((a, b) => a.z - b.z || b.score - a.score);
+      }
+
+      function stepRaceLoop(nowMs) {
+        if (phase !== "COUNTDOWN" && phase !== "RACING") return;
+
+        const dt = Math.min(0.05, Math.max(0.001, (nowMs - lastFrameMs) / 1000));
+        lastFrameMs = nowMs;
+
+        if (phase === "COUNTDOWN") {
+          countdownTimer -= dt;
+          if (countdownTimer <= 0) {
+            countdownValue -= 1;
+            if (countdownValue > 0) {
+              countdownTimer = 1.0;
+              countdownNumber.textContent = String(countdownValue);
+              playCountdownSfx(false);
+            } else {
+              countdownNumber.textContent = "GO!";
+              playCountdownSfx(true);
+              phase = "RACING";
+              setTimeout(() => {
+                if (phase === "RACING") {
+                  countdownOverlay.classList.add("hidden");
+                }
+              }, 550);
+            }
+          }
+          renderThreeFrame(nowMs);
+          animLoopRequestId = requestAnimationFrame(stepRaceLoop);
+          return;
+        }
+
+        raceElapsed += dt;
+        timeLeft = Math.max(0, RACE_DURATION_SEC - raceElapsed);
+
+        if (carState.spinTimer > 0) carState.spinTimer = Math.max(0, carState.spinTimer - dt);
+        if (carState.slowTimer > 0) carState.slowTimer = Math.max(0, carState.slowTimer - dt);
+        if (carState.padBoostTimer > 0) carState.padBoostTimer = Math.max(0, carState.padBoostTimer - dt);
+        if (carState.shake > 0) carState.shake = Math.max(0, carState.shake - dt);
+
+        const hasPadBoost = carState.padBoostTimer > 0;
+        const wantsBoost = hasPadBoost || (inputState.boost && carState.boost > 1 && carState.hp > 0);
+        if (inputState.boost && carState.boost > 1 && carState.hp > 0 && !hasPadBoost) {
+          carState.boost = Math.max(0, carState.boost - 24 * dt);
+        } else if (!wantsBoost) {
+          carState.boost = Math.min(100, carState.boost + 14 * dt);
+        }
+
+        const slowFactor = carState.slowTimer > 0 ? 0.52 : 1.0;
+        const boostFactor = hasPadBoost ? Math.max(1.68, selectedCar.boostPower * 1.15) : (wantsBoost ? selectedCar.boostPower : 1.0);
+        const targetSpeed = selectedCar.topSpeed * slowFactor * boostFactor;
+
+        const accelRate = wantsBoost ? 145 : 72;
+        if (carState.speed < targetSpeed) {
+          carState.speed = Math.min(targetSpeed, carState.speed + accelRate * dt);
+        } else {
+          carState.speed = Math.max(targetSpeed, carState.speed - 90 * dt);
+        }
+
+        const steerSpeed = 13.5 * selectedCar.handling * (carState.slowTimer > 0 ? 0.72 : 1.0);
+        const targetVx = carState.spinTimer > 0
+          ? Math.cos(nowMs * 0.022) * 9.5
+          : ((inputState.left ? -1 : 0) + (inputState.right ? 1 : 0)) * steerSpeed;
+        carState.vx += (targetVx - carState.vx) * Math.min(1, dt * 16);
+
+        const roadCenterAtCar = getCourseCenterX(carState.z);
+        carState.x = clamp(
+          carState.x + carState.vx * dt,
+          roadCenterAtCar - ROAD_HALF_WIDTH + 1.35,
+          roadCenterAtCar + ROAD_HALF_WIDTH - 1.35
+        );
+
+        const worldUnitsPerSec = carState.speed * 0.24;
+        carState.z -= worldUnitsPerSec * dt;
+
+        const ribbonTape = finishRibbonGroup && finishRibbonGroup.getObjectByName("finishRibbonTape");
+        if (carState.z <= -TRACK_LENGTH) {
+          carState.z = -TRACK_LENGTH;
+          if (ribbonTape && ribbonTape.visible) {
+            ribbonTape.visible = false;
+          }
+          updateHudTelemetry(computeStandings().findIndex((s) => s.isMe) + 1);
+          renderThreeFrame(nowMs);
+          triggerRaceEnd("FINISH_LINE");
+          return;
+        }
+
+        for (let i = 0; i < boosterPadEntities.length; i++) {
+          const b = boosterPadEntities[i];
+          if (b.collected) continue;
+          b.mesh.rotation.y = Math.sin(nowMs * 0.008 + i) * 0.12;
+          if (Math.abs(b.z - carState.z) < 2.5 && Math.abs(b.x - carState.x) < 2.2) {
+            b.collected = true;
+            b.mesh.visible = false;
+            carState.padBoostTimer = 1.8;
+            carState.boost = Math.min(100, carState.boost + 35);
+            carState.score += 200;
+            playCoinSfx(true);
+          }
+        }
+
+        for (let i = 0; i < hazardEntities.length; i++) {
+          const h = hazardEntities[i];
+          if (h.hit) continue;
+          if (h.kind === "banana") h.mesh.rotation.y += 2.2 * dt;
+
+          if (Math.abs(h.z - carState.z) < 2.1 && Math.abs(h.x - carState.x) < 1.75) {
+            h.hit = true;
+            h.mesh.visible = false;
+            carState.hp = Math.max(0, carState.hp - h.damage);
+            carState.shake = 0.55;
+            carState.boost = Math.max(0, carState.boost - 20);
+            playHazardSfx();
+
+            if (h.kind === "banana") {
+              carState.spinTimer = 1.05;
+            } else {
+              carState.slowTimer = 1.35;
+            }
+
+            if (carState.hp <= 0) {
+              updateHudTelemetry(computeStandings().findIndex((s) => s.isMe) + 1);
+              renderThreeFrame(nowMs);
+              triggerRaceEnd("DESTROYED");
+              return;
+            }
+          }
+        }
+
+        for (let i = 0; i < coinEntities.length; i++) {
+          const c = coinEntities[i];
+          if (c.collected) continue;
+          c.mesh.rotation.y += 3.6 * dt;
+
+          if (Math.abs(c.z - carState.z) < 2.2 && Math.abs(c.x - carState.x) < 1.85) {
+            c.collected = true;
+            c.mesh.visible = false;
+            carState.score += c.value;
+            carState.boost = Math.min(100, carState.boost + (c.isBig ? 22 : 10));
+            playCoinSfx(c.isBig);
+          }
+        }
+
+        for (let i = 0; i < aiEntities.length; i++) {
+          const ai = aiEntities[i];
+          const roadCenterAtAi = getCourseCenterX(ai.z);
+          ai.laneTimer -= dt;
+          if (ai.laneTimer <= 0) {
+            ai.laneTimer = 1.0 + Math.random() * 1.2;
+            const offsetFromCenter = (Math.random() * 2 - 1) * (ROAD_HALF_WIDTH - 2.0);
+            ai.targetX = roadCenterAtAi + offsetFromCenter;
+          }
+          const diffX = ai.targetX - ai.x;
+          ai.x = clamp(
+            ai.x + Math.sign(diffX) * Math.min(Math.abs(diffX), 6.2 * dt),
+            roadCenterAtAi - ROAD_HALF_WIDTH + 1.5,
+            roadCenterAtAi + ROAD_HALF_WIDTH - 1.5
+          );
+          const aiGroundY = getCourseElevationY(ai.z);
+          const aiNextY = getCourseElevationY(ai.z - 2.5);
+          ai.z -= ai.speed * 0.24 * dt;
+          ai.group.position.set(ai.x, aiGroundY + 0.14, ai.z);
+          ai.group.rotation.x = Math.atan2(aiNextY - aiGroundY, 2.5);
+          ai.group.rotation.z = -diffX * 0.05;
+          ai.wheels.forEach((w) => { w.rotation.x -= ai.speed * 0.35 * dt; });
+        }
+
+        const groundY = getCourseElevationY(carState.z);
+        const nextGroundY = getCourseElevationY(carState.z - 2.5);
+        const hillPitch = Math.atan2(nextGroundY - groundY, 2.5);
+
+        playerCarGroup.position.set(carState.x, groundY + 0.12, carState.z);
+        if (carState.spinTimer > 0) {
+          playerCarGroup.rotation.y += 12 * dt;
+          playerCarGroup.rotation.x = hillPitch;
+        } else {
+          const steerRatio = clamp(carState.vx / Math.max(1, steerSpeed), -1, 1);
+          playerCarGroup.rotation.y = -steerRatio * 0.28;
+          playerCarGroup.rotation.x = hillPitch;
+          playerCarGroup.rotation.z = -steerRatio * 0.16;
+        }
+        playerWheels.forEach((w) => {
+          w.rotation.x -= worldUnitsPerSec * 0.35 * dt;
+        });
+
+        if (boostFlameMesh) {
+          boostFlameMesh.visible = wantsBoost;
+          if (wantsBoost) {
+            const flicker = 0.85 + Math.random() * 0.45;
+            boostFlameMesh.scale.set(flicker, flicker, flicker * 1.35);
+          }
+        }
+
+        if (timeLeft <= 0) {
+          updateHudTelemetry(computeStandings().findIndex((s) => s.isMe) + 1);
+          renderThreeFrame(nowMs);
+          triggerRaceEnd("TIME_UP");
+          return;
+        }
+
+        if (nowMs - lastNetSyncMs > 180) {
+          lastNetSyncMs = nowMs;
+          sendSyncMessage("STATE", { score: carState.score, z: carState.z, hp: carState.hp });
+        }
+
+        const myRank = computeStandings().findIndex((s) => s.isMe) + 1;
+        updateHudTelemetry(myRank);
+        renderThreeFrame(nowMs);
+        animLoopRequestId = requestAnimationFrame(stepRaceLoop);
+      }
+
+      function renderThreeFrame(nowMs) {
+        if (!renderer || !scene || !camera) return;
+
+        const shakeX = carState.shake > 0 ? Math.sin(nowMs * 0.055) * carState.shake * 0.22 : 0;
+        const shakeY = carState.shake > 0 ? Math.cos(nowMs * 0.065) * carState.shake * 0.16 : 0;
+
+        const camDist = 6.4;
+        const groundY = getCourseElevationY(carState.z);
+        const desiredCamHeight = groundY + 14.5 + carState.cameraPitchOffset * 5.0;
+        smoothCamHeight += (desiredCamHeight - smoothCamHeight) * 0.22;
+
+        const yaw = carState.cameraYawOffset;
+        const targetCamX = carState.x + Math.sin(yaw) * camDist + shakeX;
+        const targetCamY = smoothCamHeight + shakeY;
+        const targetCamZ = carState.z + Math.cos(yaw) * camDist;
+
+        const desiredLookX = carState.x;
+        const desiredLookY = getCourseElevationY(carState.z - 12) + 0.4;
+        const desiredLookZ = carState.z - 12;
+        smoothCamLookX += (desiredLookX - smoothCamLookX) * 0.35;
+        smoothCamLookY += (desiredLookY - smoothCamLookY) * 0.25;
+        smoothCamLookZ += (desiredLookZ - smoothCamLookZ) * 0.45;
+
+        camera.position.set(targetCamX, targetCamY, targetCamZ);
+        camera.lookAt(smoothCamLookX, smoothCamLookY, smoothCamLookZ);
+
+        try {
+          renderer.render(scene, camera);
+        } catch (_) {}
+      }
+
+      function updateHudTelemetry(rank) {
+        const mins = Math.floor(timeLeft / 60);
+        const secs = Math.floor(timeLeft % 60);
+        hudTimer.textContent = String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+        hudScore.textContent = carState.score.toLocaleString() + "원";
+        hudRank.textContent = rank + " / 5위";
+
+        const pct = Math.min(100, Math.max(0, Math.round((Math.abs(carState.z) / TRACK_LENGTH) * 100)));
+        hudProgress.textContent = pct + "%";
+
+        const hpRounded = Math.round(carState.hp);
+        hudHpText.textContent = hpRounded + "%";
+        hudHpBar.style.width = hpRounded + "%";
+
+        const boostRounded = Math.round(carState.boost);
+        hudBoostText.textContent = boostRounded + "%";
+        hudBoostBar.style.width = boostRounded + "%";
+
+        hudSpeedNum.textContent = String(Math.round(carState.speed));
+
+        if (phase === "COUNTDOWN") {
+          hudStatusPill.textContent = "STATUS · STARTING GRID (" + countdownValue + ")";
+        } else if (carState.padBoostTimer > 0) {
+          hudStatusPill.textContent = "STATUS · ROAD BOOSTER HYPER SPEED!";
+        } else if (inputState.boost && carState.boost > 1) {
+          hudStatusPill.textContent = "STATUS · TURBO OVERDRIVE!";
+        } else if (carState.spinTimer > 0) {
+          hudStatusPill.textContent = "STATUS · BANANA SLIP!";
+        } else if (carState.slowTimer > 0) {
+          hudStatusPill.textContent = "STATUS · DAMAGE SLOWDOWN!";
+        } else {
+          hudStatusPill.textContent = "STATUS · COAST CRUISE";
+        }
+      }
+
+      function resizeThreeViewport() {
+        if (!renderer || !camera) return;
+        const w = Math.max(320, viewportWrapper.clientWidth || 960);
+        const h = Math.max(240, viewportWrapper.clientHeight || 540);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h, false);
+        if (phase === "LOBBY" || phase === "CAR_SELECT" || phase === "ENDED") {
+          renderThreeFrame(performance.now());
+        }
+      }
+
+      roomInput.addEventListener("input", () => {
+        const digitsOnly = roomInput.value.replace(/[^0-9]/g, "").slice(0, 4);
+        if (roomInput.value !== digitsOnly) {
+          roomInput.value = digitsOnly;
+        }
       });
 
-      // Player car
-      drawCar(player.x, player.y, "#e53935", myNickname);
-    }
+      joinRoomBtn.addEventListener("click", async () => {
+        await ensureAudioContext();
+        const typedNick = nickInput.value.trim();
+        const typedRoom = roomInput.value.replace(/[^0-9]/g, "").slice(0, 4);
 
-    function drawCar(x, y, color, label) {
-      ctx.save();
-      ctx.translate(x, y);
+        myNickname = typedNick || ("드라이버_" + Math.floor(100 + Math.random() * 899));
+        if (isInRoom) {
+          sendSyncMessage("LEAVE");
+        }
+        remotePeers.clear();
+        roomCode = typedRoom || "7777";
+        isInRoom = true;
 
-      // Shadow
-      ctx.fillStyle = "rgba(0,0,0,0.22)";
-      ctx.beginPath();
-      ctx.ellipse(0, 6, 22, 34, 0, 0, Math.PI * 2);
-      ctx.fill();
+        bindRoomChannel();
+        sendSyncMessage("JOIN");
+        renderLobbySlots();
+        showToast("방 #" + roomCode + "에 " + myNickname + " 님으로 입장했습니다.");
+      });
 
-      // Body
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.roundRect(-18, -30, 36, 60, 10);
-      ctx.fill();
+      leaveRoomBtn.addEventListener("click", () => {
+        sendSyncMessage("LEAVE");
+        isInRoom = false;
+        remotePeers.clear();
+        nickInput.value = "";
+        roomInput.value = "";
+        renderLobbySlots();
+        showToast("대기실에서 나갔습니다.");
+      });
 
-      // Windshield
-      ctx.fillStyle = "#e1f5fe";
-      ctx.fillRect(-12, -16, 24, 14);
+      openCarSelectBtn.addEventListener("click", async () => {
+        await ensureAudioContext();
+        if (!isInRoom) {
+          isInRoom = true;
+          bindRoomChannel();
+          sendSyncMessage("JOIN");
+          renderLobbySlots();
+        }
+        phase = "CAR_SELECT";
+        renderCarSelectCards();
+        switchScreen("CAR_SELECT");
+      });
 
-      // Label
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 12px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(label, 0, -38);
-      ctx.restore();
-    }
+      cancelCarSelectBtn.addEventListener("click", () => {
+        phase = "LOBBY";
+        switchScreen("LOBBY");
+      });
 
-    // Event listeners
-    applyRoomBtn.addEventListener("click", () => {
-      const nextNick = nicknameInput.value.trim();
-      const nextRoom = roomInput.value.trim();
-      if (nextNick) {
-        myNickname = nextNick;
-        localStorage.setItem("ccr_nick", myNickname);
+      confirmGridStartBtn.addEventListener("click", async () => {
+        await ensureAudioContext();
+        courseSeed = Math.floor(Math.random() * 1000000);
+        sendSyncMessage("GRID_START", { carId: selectedCar.id, courseSeed });
+        beginRaceLoop();
+      });
+
+      abortToLobbyBtn.addEventListener("click", () => {
+        phase = "LOBBY";
+        if (animLoopRequestId) {
+          cancelAnimationFrame(animLoopRequestId);
+          animLoopRequestId = 0;
+        }
+        inputState.left = false;
+        inputState.right = false;
+        inputState.boost = false;
+        switchScreen("LOBBY");
+      });
+
+      raceAgainBtn.addEventListener("click", () => {
+        phase = "CAR_SELECT";
+        endOverlay.classList.add("hidden");
+        countdownOverlay.classList.add("hidden");
+        renderCarSelectCards();
+        switchScreen("CAR_SELECT");
+      });
+
+      backToLobbyBtn.addEventListener("click", () => {
+        phase = "LOBBY";
+        endOverlay.classList.add("hidden");
+        countdownOverlay.classList.add("hidden");
+        switchScreen("LOBBY");
+      });
+
+      soundToggleBtn.addEventListener("click", async () => {
+        soundEnabled = !soundEnabled;
+        if (soundEnabled) {
+          await ensureAudioContext();
+          soundToggleBtn.textContent = "🔊 SFX ON";
+          showToast("효과음이 켜졌습니다.");
+        } else {
+          soundToggleBtn.textContent = "🔇 SFX OFF";
+          showToast("효과음이 꺼졌습니다.");
+        }
+      });
+
+      function bindHoldButton(btnEl, keyName) {
+        const press = async (ev) => {
+          ev.preventDefault();
+          await ensureAudioContext();
+          inputState[keyName] = true;
+          if (keyName === "boost") {
+            ctrlBoostBtn.classList.add("is-active");
+          }
+        };
+        const release = (ev) => {
+          ev.preventDefault();
+          inputState[keyName] = false;
+          if (keyName === "boost") {
+            ctrlBoostBtn.classList.remove("is-active");
+          }
+        };
+
+        btnEl.addEventListener("pointerdown", press);
+        btnEl.addEventListener("pointerup", release);
+        btnEl.addEventListener("pointerleave", release);
+        btnEl.addEventListener("pointercancel", release);
       }
-      if (nextRoom) {
-        sendPacket("LEAVE");
-        remotePlayers.clear();
-        roomCode = nextRoom;
-        localStorage.setItem("ccr_room", roomCode);
-        setupBroadcastChannel();
-        connectPublicWebSocket();
+
+      bindHoldButton(ctrlLeftBtn, "left");
+      bindHoldButton(ctrlRightBtn, "right");
+      bindHoldButton(ctrlBoostBtn, "boost");
+
+      window.addEventListener("keydown", async (e) => {
+        const k = e.key.toLowerCase();
+        if (k === "arrowleft" || k === "a") {
+          inputState.left = true;
+        } else if (k === "arrowright" || k === "d") {
+          inputState.right = true;
+        } else if (e.key === " " || k === "arrowup" || k === "w") {
+          if (phase === "RACING") e.preventDefault();
+          await ensureAudioContext();
+          inputState.boost = true;
+          ctrlBoostBtn.classList.add("is-active");
+        }
+      });
+
+      window.addEventListener("keyup", (e) => {
+        const k = e.key.toLowerCase();
+        if (k === "arrowleft" || k === "a") {
+          inputState.left = false;
+        } else if (k === "arrowright" || k === "d") {
+          inputState.right = false;
+        } else if (e.key === " " || k === "arrowup" || k === "w") {
+          inputState.boost = false;
+          ctrlBoostBtn.classList.remove("is-active");
+        }
+      });
+
+      threeCanvas.addEventListener("pointerdown", (e) => {
+        isDraggingCam = true;
+        lastPointerX = e.clientX;
+        lastPointerY = e.clientY;
+      });
+
+      window.addEventListener("pointermove", (e) => {
+        if (!isDraggingCam) return;
+        const dx = e.clientX - lastPointerX;
+        const dy = e.clientY - lastPointerY;
+        lastPointerX = e.clientX;
+        lastPointerY = e.clientY;
+        carState.cameraYawOffset = clamp(carState.cameraYawOffset - dx * 0.005, -0.65, 0.65);
+        carState.cameraPitchOffset = clamp(carState.cameraPitchOffset + dy * 0.003, -0.25, 0.45);
+      });
+
+      window.addEventListener("pointerup", () => {
+        isDraggingCam = false;
+      });
+
+      window.addEventListener("resize", resizeThreeViewport);
+
+      function clamp(val, min, max) {
+        return Math.max(min, Math.min(max, val));
       }
-      sendPacket("HELLO", { score: 0, progress: 0, x: player.x });
-      renderLobby();
-      updateSyncStatus();
-    });
 
-    startBtn.addEventListener("click", () => {
-      startRaceLocal(true);
-    });
-
-    leaveBtn.addEventListener("click", () => {
-      sendPacket("LEAVE");
-      nicknameInput.value = myNickname;
-      roomInput.focus();
-      updateSyncStatus();
-    });
-
-    backLobbyBtn.addEventListener("click", () => {
-      gameRunning = false;
-      raceView.style.display = "none";
-      lobbyView.style.display = "flex";
-      sendPacket("HELLO", { score: player.score, progress: player.progress, x: player.x });
-      renderLobby();
-    });
-
-    replayBtn.addEventListener("click", () => {
-      gameRunning = false;
-      raceView.style.display = "none";
-      lobbyView.style.display = "flex";
-      sendPacket("HELLO", { score: 0, progress: 0, x: player.x });
-      renderLobby();
-    });
-
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") keys.left = true;
-      if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") keys.right = true;
-      if (e.key === " " || e.key === "ArrowUp" || e.key.toLowerCase() === "w") keys.boost = true;
-    });
-
-    window.addEventListener("keyup", (e) => {
-      if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") keys.left = false;
-      if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") keys.right = false;
-      if (e.key === " " || e.key === "ArrowUp" || e.key.toLowerCase() === "w") keys.boost = false;
-    });
-
-    function bindTouchButton(id, keyName) {
-      const el = document.getElementById(id);
-      const down = (ev) => { ev.preventDefault(); keys[keyName] = true; };
-      const up = (ev) => { ev.preventDefault(); keys[keyName] = false; };
-      el.addEventListener("pointerdown", down);
-      el.addEventListener("pointerup", up);
-      el.addEventListener("pointerleave", up);
-      el.addEventListener("pointercancel", up);
-    }
-
-    bindTouchButton("leftBtn", "left");
-    bindTouchButton("rightBtn", "right");
-    bindTouchButton("boostBtn", "boost");
-
-    initInputs();
-    setupBroadcastChannel();
-    connectPublicWebSocket();
-    renderLobby();
-    updateSyncStatus();
-
-    setInterval(() => {
-      pruneStalePeers();
-      if (!gameRunning) {
-        sendPacket("PING", { score: player.score, progress: player.progress, x: player.x });
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
       }
-    }, 3000);
+
+      function initOnLoad() {
+        nickInput.value = "";
+        roomInput.value = "";
+        refreshRecordBadges();
+        bindRoomChannel();
+        renderLobbySlots();
+        sendSyncMessage("HELLO");
+        initCloudPersistence();
+      }
+
+      if (document.readyState === "complete") {
+        initOnLoad();
+      } else {
+        window.addEventListener("load", initOnLoad);
+      }
+
+      setInterval(() => {
+        const now = Date.now();
+        let changed = false;
+        for (const [id, peer] of remotePeers.entries()) {
+          if (now - peer.lastSeen > 12000) {
+            remotePeers.delete(id);
+            changed = true;
+          }
+        }
+        if (changed) renderLobbySlots();
+        if (isInRoom && phase === "LOBBY") {
+          sendSyncMessage("PING");
+        }
+      }, 3000);
+    })();
   </script>
 </body>
 </html>
